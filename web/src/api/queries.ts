@@ -247,7 +247,7 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
     },
     onSettled: (_data, _err, vars) => {
       setPending(vars.id, false);
-      for (const k of ["transactions", "summary", "set-aside"]) {
+      for (const k of ["transactions", "summary", "set-aside", "history"]) {
         qc.invalidateQueries({ queryKey: [k] });
       }
     },

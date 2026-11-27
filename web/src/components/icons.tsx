@@ -71,3 +71,8 @@ export const Lightbulb = (p: P) => (
     <path d="M7.5 14.5h5M8 17h4M10 3a5 5 0 0 0-3 9c.6.5 1 1.2 1 2h4c0-.8.4-1.5 1-2a5 5 0 0 0-3-9Z" />
   </Icon>
 );
+export const X = (p: P) => (
+  <Icon {...p}>
+    <path d="m5 5 10 10M15 5 5 15" />
+  </Icon>
+);

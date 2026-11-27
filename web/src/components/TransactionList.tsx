@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFlags } from "../api/auth";
 import { useCategories, useRecategorize, useSuggestion, useTransactions } from "../api/queries";
 import type { Category, Transaction } from "../api/types";
@@ -9,6 +9,7 @@ import { useVendorDown, VENDOR_DOWN_REASON } from "./Banners";
 import { ErrorState } from "./ErrorState";
 import { Filters } from "./Filters";
 import { Clock } from "./icons";
+import { TransactionDrawer } from "./TransactionDrawer";
 
 function Badges({ t }: { t: Transaction }) {
   return (
@@ -139,6 +140,8 @@ function Row({
   recat,
   suggestOn,
   eager,
+  onOpen,
+  selected,
 }: {
   t: Transaction;
   categories: Category[];
@@ -146,6 +149,8 @@ function Row({
   recat: Recat;
   suggestOn: boolean;
   eager: boolean;
+  onOpen: (id: string, trigger: HTMLElement) => void;
+  selected: boolean;
 }) {
   const [touched, setTouched] = useState(false);
   const credit = t.direction === "credit";
@@ -159,7 +164,14 @@ function Row({
     >
       <span className="txn-row__date">{formatPostedOn(t.posted_on)}</span>
       <span className="txn-row__main">
-        <span className="txn-row__merchant">{t.merchant}</span>
+        <button
+          type="button"
+          className="txn-row__merchant txn-row__open"
+          aria-haspopup="dialog"
+          onClick={(e) => onOpen(t.id, e.currentTarget)}
+        >
+          {t.merchant}
+        </button>
         {t.description && <span className="txn-row__desc">{t.description}</span>}
         <Badges t={t} />
       </span>
@@ -198,6 +210,16 @@ export function TransactionList() {
   };
   const q = useTransactions(params);
   const rows = useMemo(() => q.data?.pages.flatMap((p) => p.results) ?? [], [q.data]);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const openDrawer = (id: string, trigger: HTMLElement) => {
+    triggerRef.current = trigger;
+    setOpenId(id);
+  };
+  const closeDrawer = () => {
+    setOpenId(null);
+    triggerRef.current?.focus();
+  };
   const [announce, setAnnounce] = useState("");
   const recat = useRecategorize({
     onSaved: (saved) => {
@@ -266,6 +288,8 @@ export function TransactionList() {
               recat={recat}
               suggestOn={suggestionsOn}
               eager={i < 5}
+              onOpen={openDrawer}
+              selected={openId === t.id}
             />
           ))}
         </ul>
@@ -309,6 +333,24 @@ export function TransactionList() {
         {announce}
       </div>
       <Filters count={count} hasMore={!!q.hasNextPage} />
+      {openId && (
+        <TransactionDrawer
+          txn={rows.find((r) => r.id === openId)}
+          categories={categories.data ?? []}
+          onClose={closeDrawer}
+          picker={(() => {
+            const t = rows.find((r) => r.id === openId);
+            return t ? (
+              <CategorySelect
+                t={t}
+                categories={categories.data ?? []}
+                disabled={vendorDown}
+                recat={recat}
+              />
+            ) : null;
+          })()}
+        />
+      )}
       {vendorDown && <p className="hint">{VENDOR_DOWN_REASON}</p>}
       {body}
     </section>
