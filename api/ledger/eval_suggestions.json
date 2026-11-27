@@ -1,0 +1,17 @@
+[
+  {"merchant": "Figma", "description": "Monthly seat", "direction": "debit", "expected": "software"},
+  {"merchant": "Blue Bottle Coffee", "description": "Client coffee", "direction": "debit", "expected": "meals"},
+  {"merchant": "Delta Air Lines", "description": "AUS to SFO", "direction": "debit", "expected": "travel"},
+  {"merchant": "Acme Studio LLC", "description": "Invoice #1042", "direction": "credit", "expected": "income"},
+  {"merchant": "WeWork", "description": "Coworking desk", "direction": "debit", "expected": "rent"},
+  {"merchant": "Google Ads", "description": "Campaign spend", "direction": "debit", "expected": "advertising"},
+  {"merchant": "Upwork", "description": "Freelance illustrator", "direction": "debit", "expected": "contractors"},
+  {"merchant": "Comcast Business", "description": "Internet", "direction": "debit", "expected": "utilities"},
+  {"merchant": "Staples", "description": "Printer paper", "direction": "debit", "expected": "office"},
+  {"merchant": "Stripe", "description": "Processing fee", "direction": "debit", "expected": "fees"},
+  {"merchant": "State Farm", "description": "Liability insurance", "direction": "debit", "expected": "insurance"},
+  {"merchant": "LegalZoom", "description": "Contract review", "direction": "debit", "expected": "professional_services"},
+  {"merchant": "Apple Store", "description": "Monitor", "direction": "debit", "expected": "equipment"},
+  {"merchant": "Whole Foods", "description": "Groceries", "direction": "debit", "expected": "personal"},
+  {"merchant": "Card payment", "description": "Transfer to credit card", "direction": "debit", "expected": "transfer"}
+]

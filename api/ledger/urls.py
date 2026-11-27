@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import auth_views, rules_views, tax_views, views
+from . import auth_views, rules_views, suggest_views, tax_views, views
 
 urlpatterns = [
     path("health", views.HealthView.as_view()),
@@ -8,6 +8,7 @@ urlpatterns = [
     path("categories", views.CategoriesView.as_view()),
     path("transactions", views.TransactionListView.as_view()),
     path("transactions/<str:txn_id>", views.TransactionDetailView.as_view()),
+    path("transactions/<str:txn_id>/suggestion", suggest_views.SuggestionView.as_view()),
     path("transactions/<str:txn_id>/history", views.TransactionHistoryView.as_view()),
     path("summary", views.SummaryView.as_view()),
     path("flags", auth_views.FlagsView.as_view()),

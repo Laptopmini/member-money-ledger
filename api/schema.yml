@@ -708,6 +708,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/transactions/{txn_id}/suggestion:
+    get:
+      operationId: getTransactionSuggestion
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (defence in depth next to the CSRF token).
+      parameters:
+      - in: path
+        name: txn_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - transactions
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Suggestion'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
 components:
   schemas:
     Category:
@@ -1122,6 +1155,31 @@ components:
         * `behind` - behind
         * `no_income` - no_income
         * `needs_review` - needs_review
+    SourceEnum:
+      enum:
+      - rule
+      - cache
+      - model
+      type: string
+      description: |-
+        * `rule` - rule
+        * `cache` - cache
+        * `model` - model
+    Suggestion:
+      type: object
+      properties:
+        category:
+          type: string
+          nullable: true
+        label:
+          type: string
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+        model:
+          type: string
+          nullable: true
+      required:
+      - category
     Summary:
       type: object
       properties:

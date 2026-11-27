@@ -45,6 +45,12 @@ VENDOR_TIMEOUT = float(os.environ.get("VENDOR_TIMEOUT", "5"))
 VENDOR_RETRIES = int(os.environ.get("VENDOR_RETRIES", "2"))
 SYNC_STALE_SECONDS = int(os.environ.get("SYNC_STALE_SECONDS", "60"))
 
+# Category suggestions: any OpenAI-compatible endpoint. Empty URL or model = feature off.
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "").strip().rstrip("/")
+LLM_MODEL = os.environ.get("LLM_MODEL", "").strip()
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "").strip()
+LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT", "8"))
+
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",

@@ -204,3 +204,15 @@ class MerchantRule(models.Model):
 
     def __str__(self) -> str:
         return f"{self.merchant_key} -> {self.category}"
+
+
+class MerchantSuggestion(models.Model):
+    """Cached model answer per normalized merchant, so repeat merchants cost nothing."""
+
+    merchant_key = models.CharField(max_length=255, unique=True)
+    category = models.CharField(max_length=64)
+    model = models.CharField(max_length=128)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self) -> str:
+        return f"{self.merchant_key} -> {self.category}"
