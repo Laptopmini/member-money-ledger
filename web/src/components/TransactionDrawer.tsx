@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../api/client";
+import { useSaveDescription } from "../api/queries";
 import type { Category, Transaction } from "../api/types";
-import { formatPostedOn } from "../lib/dates";
+import { formatLongDate, formatPostedOn } from "../lib/dates";
 import { type HistoryEvent, historyMeta, historySentence } from "../lib/history";
 import { formatMinor } from "../lib/money";
-import { Clock, X } from "./icons";
+import { Clock, Plus, X } from "./icons";
 
 function useHistory(id: string) {
   return useQuery({
@@ -23,17 +24,145 @@ function useHistory(id: string) {
 const FOCUSABLE =
   'button:not([disabled]), select:not([disabled]), textarea, input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 
+const HINTS: Record<string, string> = {
+  meals: "Counts at 50%",
+  personal: "Doesn't lower your taxes",
+  transfer: "Between your own accounts",
+  income: "Money in only",
+};
+
+function CategoryGrid({
+  txn,
+  categories,
+  disabled,
+  onPick,
+}: {
+  txn: Transaction;
+  categories: Category[];
+  disabled: boolean;
+  onPick: (key: string) => void;
+}) {
+  const groups: { label: string; items: Category[] }[] = [
+    { label: "Business expenses", items: categories.filter((c) => c.kind === "expense") },
+    {
+      label: "Not business",
+      items: categories.filter((c) => c.kind === "personal" || c.kind === "transfer"),
+    },
+    { label: "Money in", items: categories.filter((c) => c.kind === "income") },
+  ];
+  const known = categories.some((c) => c.key === txn.category);
+  return (
+    <fieldset className="cat-options">
+      <legend className="visually-hidden">Category</legend>
+      <fieldset className="cat-options__group">
+        <legend className="cat-options__legend">Needs a decision</legend>
+        <div className="cat-options__grid">
+          <label className="cat-option cat-option--uncategorized">
+            <input
+              type="radio"
+              name="drawer-cat"
+              value=""
+              checked={txn.category === null}
+              disabled
+              readOnly
+            />
+            <span className="cat-option__box">
+              <Plus />
+              <span>Uncategorized</span>
+            </span>
+          </label>
+          {txn.category !== null && !known && (
+            <label className="cat-option">
+              <input
+                type="radio"
+                name="drawer-cat"
+                value={txn.category}
+                checked
+                readOnly
+                disabled
+              />
+              <span className="cat-option__box">
+                <span>{txn.category_label}</span>
+              </span>
+            </label>
+          )}
+        </div>
+      </fieldset>
+      {groups.map((g) => (
+        <fieldset key={g.label} className="cat-options__group">
+          <legend className="cat-options__legend">{g.label}</legend>
+          <div className="cat-options__grid">
+            {g.items.map((c) => (
+              <label key={c.key} className={`cat-option cat--${c.key}`}>
+                <input
+                  type="radio"
+                  name="drawer-cat"
+                  value={c.key}
+                  checked={txn.category === c.key}
+                  disabled={disabled || (c.key === "income" && txn.direction === "debit")}
+                  onChange={() => onPick(c.key)}
+                />
+                <span className="cat-option__box">
+                  <span className="cat-dot" aria-hidden="true" />
+                  <span>{c.label}</span>
+                  {HINTS[c.key] && <span className="cat-option__hint">{HINTS[c.key]}</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+    </fieldset>
+  );
+}
+
+function DescriptionField({ txn, disabled }: { txn: Transaction; disabled: boolean }) {
+  const save = useSaveDescription();
+  const [value, setValue] = useState(txn.description);
+  useEffect(() => setValue(txn.description), [txn.description]);
+  return (
+    <div className="field">
+      <label className="field__label" htmlFor="drawer-desc">
+        Description
+      </label>
+      <textarea
+        id="drawer-desc"
+        className="textarea"
+        rows={2}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <div className="drawer__actions">
+        <button
+          type="button"
+          className="btn btn--secondary btn--sm"
+          disabled={disabled || save.isPending || value === txn.description}
+          onClick={() =>
+            save.mutate({ id: txn.id, description: value, expected_updated_at: txn.updated_at })
+          }
+        >
+          Save description
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function TransactionDrawer({
   txn,
   categories,
   onClose,
-  picker,
+  onPick,
+  disabled,
+  loading,
 }: {
   txn: Transaction | undefined;
   categories: Category[];
   onClose: () => void;
-  /** The shared category picker (same recategorize mutation as the row). */
-  picker: React.ReactNode;
+  onPick: (key: string) => void;
+  disabled: boolean;
+  loading: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -65,6 +194,7 @@ export function TransactionDrawer({
   };
 
   const credit = txn?.direction === "credit";
+  const pending = txn?.status === "pending";
   return (
     <>
       <div className="scrim" onClick={onClose} aria-hidden="true" />
@@ -77,7 +207,7 @@ export function TransactionDrawer({
         aria-labelledby="drawer-title"
         onKeyDown={onKeyDown}
       >
-        <div className="drawer__header">
+        <header className="drawer__header">
           <div>
             <p className="drawer__eyebrow">
               {txn ? `${formatPostedOn(txn.posted_on)} · ${txn.account_label}` : ""}
@@ -89,68 +219,74 @@ export function TransactionDrawer({
           <button
             ref={closeRef}
             type="button"
-            className="btn btn--icon btn--small"
+            className="btn btn--ghost btn--icon"
             aria-label="Close details"
             onClick={onClose}
           >
             <X />
           </button>
-        </div>
+          {txn && (
+            <div className="drawer__amount-row">
+              <span className="drawer__amount money">
+                {credit ? "+" : "−"}
+                {formatMinor(txn.amount_cents, txn.currency)}
+                <span className="visually-hidden">{credit ? " credit" : " debit"}</span>
+              </span>
+              {pending && (
+                <span className="badge badge--pending">
+                  <Clock /> Pending
+                </span>
+              )}
+            </div>
+          )}
+        </header>
 
-        {!txn ? (
+        {loading && !txn ? (
+          <div className="drawer__body" aria-busy="true">
+            <span className="skeleton skeleton--hero" />
+            <span className="skeleton skeleton--option" />
+            <span className="skeleton skeleton--option" />
+          </div>
+        ) : !txn ? (
           <div className="drawer__body">
-            <p className="state__title">This transaction is no longer in your bank feed</p>
-            <button type="button" className="btn" onClick={onClose}>
-              Back to transactions
-            </button>
+            <div className="state">
+              <p className="state__title">This transaction is no longer in your bank feed</p>
+              <button type="button" className="btn btn--secondary" onClick={onClose}>
+                Back to transactions
+              </button>
+            </div>
           </div>
         ) : (
           <div className="drawer__body">
-            <p className={`drawer__amount amount ${credit ? "amount--credit" : ""}`}>
-              {credit ? "+" : "−"}
-              {formatMinor(txn.amount_cents, txn.currency)}
-              <span className="visually-hidden">{credit ? " credit" : " debit"}</span>
-            </p>
-            <dl className="detail-list">
-              <div>
+            <section className="drawer__section">
+              <dl className="detail-list">
                 <dt>Date</dt>
-                <dd>{formatPostedOn(txn.posted_on)}</dd>
-              </div>
-              <div>
+                <dd>
+                  <time dateTime={txn.posted_on}>{formatLongDate(txn.posted_on)}</time>
+                </dd>
                 <dt>Account</dt>
                 <dd>{txn.account_label}</dd>
-              </div>
-              <div>
                 <dt>Status</dt>
-                <dd>
-                  {txn.status === "pending" ? (
-                    <span className="badge badge--pending">
-                      <Clock /> Pending
-                    </span>
-                  ) : (
-                    "Posted"
-                  )}
-                </dd>
-              </div>
-            </dl>
+                <dd>{pending ? "Pending · may change when it posts. Not in totals." : "Posted"}</dd>
+                <dt>Direction</dt>
+                <dd>{credit ? "Money in" : "Money out"}</dd>
+              </dl>
+            </section>
             <section className="drawer__section">
               <h3 className="drawer__section-title">Category</h3>
-              {picker}
+              <CategoryGrid txn={txn} categories={categories} disabled={disabled} onPick={onPick} />
             </section>
-            {txn.description && (
-              <section className="drawer__section">
-                <h3 className="drawer__section-title">Description</h3>
-                <p>{txn.description}</p>
-              </section>
-            )}
+            <section className="drawer__section">
+              <DescriptionField txn={txn} disabled={disabled} />
+            </section>
             <section className="drawer__section" aria-busy={history.isPending}>
               <h3 className="drawer__section-title">History</h3>
               {history.isPending ? (
-                <div className="skeleton skeleton--row" />
+                <span className="skeleton skeleton--option" />
               ) : history.isError ? (
-                <p className="hint">Couldn't load the history.</p>
+                <p className="field__hint">Couldn't load the history.</p>
               ) : history.data.length === 0 ? (
-                <p className="hint">No changes yet.</p>
+                <p className="field__hint">No changes yet.</p>
               ) : (
                 <ol className="history">
                   {history.data.map((e) => (

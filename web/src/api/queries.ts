@@ -115,11 +115,17 @@ const prompted = new Set<string>();
 /** Test hook: the prompt is shown once per merchant per session. */
 export const resetRulePrompts = () => prompted.clear();
 
+export type RowNote =
+  | { kind: "rule"; merchant: string; label: string; count: number; apply: () => void }
+  | { kind: "stale"; message: string };
+
 async function offerMerchantRule(
   qc: QueryClient,
   toast: ReturnType<typeof useToast>,
   merchant: string,
   category: string,
+  rowId: string,
+  setNote: (id: string, note: RowNote | null) => void,
 ) {
   const flags = qc.getQueryData<Flags>(["flags"]);
   if (flags?.["merchant-rules"] !== true || prompted.has(merchant)) return;
@@ -136,35 +142,35 @@ async function offerMerchantRule(
   const label =
     qc.getQueryData<Category[]>(["categories"])?.find((c) => c.key === category)?.label ?? category;
   const n = preview.matching_uncategorized_count;
-  toast({
-    kind: "success",
-    message: `Apply ${label} to ${n} other ${merchant} ${n === 1 ? "transaction" : "transactions"}? Future ${merchant} transactions too.`,
-    action: {
-      label: "Apply",
-      run: async () => {
-        try {
-          const res = await apiFetch<MerchantRuleCreated>("/api/rules", {
-            method: "POST",
-            body: { merchant, category },
-            userActivity: true,
-          });
-          toast({
-            kind: "success",
-            message: `Applied to ${res.applied_count ?? n} ${(res.applied_count ?? n) === 1 ? "transaction" : "transactions"}`,
-          });
-          for (const k of ["transactions", "summary", "set-aside"]) {
-            qc.invalidateQueries({ queryKey: [k] });
-          }
-        } catch (e) {
-          if (e instanceof ApiError && e.code === "feature_disabled") return;
-          toast({
-            kind: "error",
-            message: e instanceof ApiError ? e.message : "Couldn't apply the rule.",
-          });
+  setNote(rowId, {
+    kind: "rule",
+    merchant,
+    label,
+    count: n,
+    apply: async () => {
+      setNote(rowId, null);
+      try {
+        const res = await apiFetch<MerchantRuleCreated>("/api/rules", {
+          method: "POST",
+          body: { merchant, category },
+          userActivity: true,
+        });
+        const applied = res.applied_count ?? n;
+        toast({
+          kind: "success",
+          message: `Applied to ${applied} ${applied === 1 ? "transaction" : "transactions"}`,
+        });
+        for (const k of ["transactions", "summary", "set-aside"]) {
+          qc.invalidateQueries({ queryKey: [k] });
         }
-      },
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "feature_disabled") return;
+        toast({
+          kind: "error",
+          message: e instanceof ApiError ? e.message : "Couldn't apply the rule.",
+        });
+      }
     },
-    secondary: { label: "Not now", run: () => {} },
   });
 }
 
@@ -185,6 +191,15 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
   const qc = useQueryClient();
   const toast = useToast();
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const [notes, setNotes] = useState<Record<string, RowNote>>({});
+  const [rolledBack, setRolledBack] = useState<ReadonlySet<string>>(new Set());
+  const setNote = (id: string, note: RowNote | null) =>
+    setNotes((prev) => {
+      const next = { ...prev };
+      if (note) next[id] = note;
+      else delete next[id];
+      return next;
+    });
   const onSaved = useRef(opts.onSaved);
   onSaved.current = opts.onSaved;
   const setPending = (id: string, on: boolean) =>
@@ -222,7 +237,8 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
       patchRow(qc, server.id, fields);
       toast({ kind: "success", message: "Saved to Ledgerly" });
       onSaved.current?.(server);
-      if (merchant && server.category) void offerMerchantRule(qc, toast, merchant, server.category);
+      if (merchant && server.category)
+        void offerMerchantRule(qc, toast, merchant, server.category, server.id, setNote);
     },
     onError: (err, vars, ctx) => {
       if (err.code === "vendor_unavailable") qc.invalidateQueries({ queryKey: ["sync-status"] });
@@ -232,9 +248,19 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
         return;
       }
       if (ctx?.before) patchRow(qc, vars.id, ctx.before);
+      setRolledBack((p) => new Set(p).add(vars.id));
+      setTimeout(
+        () =>
+          setRolledBack((p) => {
+            const n = new Set(p);
+            n.delete(vars.id);
+            return n;
+          }),
+        600,
+      );
       if (err.status === 409) {
-        toast({
-          kind: "error",
+        setNote(vars.id, {
+          kind: "stale",
           message: "This transaction changed in your bank feed. Review and try again.",
         });
       } else {
@@ -252,7 +278,7 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
       }
     },
   });
-  return { recategorize: mutation.mutate, pendingIds };
+  return { recategorize: mutation.mutate, pendingIds, notes, setNote, rolledBack };
 }
 
 export function useRefresh() {
@@ -283,5 +309,27 @@ export function useSuggestion(id: string, enabled: boolean) {
     retry: false,
     queryFn: ({ signal }) =>
       apiFetch<Suggestion>(`/api/transactions/${encodeURIComponent(id)}/suggestion`, { signal }),
+  });
+}
+
+export function useSaveDescription() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation<
+    Transaction,
+    ApiError,
+    { id: string; description: string; expected_updated_at: string }
+  >({
+    mutationFn: ({ id, description, expected_updated_at }) =>
+      apiFetch<Transaction>(`/api/transactions/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: { description, expected_updated_at } satisfies TransactionPatch,
+        userActivity: true,
+      }),
+    onSuccess: () => toast({ kind: "success", message: "Saved to Ledgerly" }),
+    onError: (e) => toast({ kind: "error", message: e.message }),
+    onSettled: () => {
+      for (const k of ["transactions", "history"]) qc.invalidateQueries({ queryKey: [k] });
+    },
   });
 }

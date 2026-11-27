@@ -60,6 +60,8 @@ function write(next: Filters, pinMonth = false) {
   for (const k of ["from", "to", "status", "account", "q"] as const) {
     if (next[k]) sp.set(k, next[k]);
   }
+  const open = new URLSearchParams(window.location.search).get("txn");
+  if (open) sp.set("txn", open); // keep the drawer deep link
   const qs = sp.toString();
   const url = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`;
   window.history.replaceState(null, "", url);
