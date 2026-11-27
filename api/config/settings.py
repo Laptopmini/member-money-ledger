@@ -12,6 +12,9 @@ def _flag(name: str, default: str) -> bool:
 
 DEBUG = _flag("DJANGO_DEBUG", "0")
 
+# Captured at import: Django flips settings.DEBUG to False while running tests.
+ALLOW_DEV_DEFAULTS = DEBUG
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if not DEBUG:
@@ -23,6 +26,18 @@ ALLOWED_HOSTS = [
     for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if h.strip()
 ]
+
+TRUST_PROXY = _flag("TRUST_PROXY", "0")
+
+# Sessions (ADR 0009/0013): the 15-minute idle rule is enforced by IdleTimeoutMiddleware and
+# only refreshed by requests with `X-User-Activity: 1`. The store lifetime is longer than the
+# idle limit on purpose, so an idle session is reported as `session_expired` (not a bare 401).
+IDLE_TIMEOUT_SECONDS = 900
+SESSION_COOKIE_AGE = 4 * 3600
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 # Ledgerly (vendor) client settings.
 VENDOR_URL = os.environ.get("VENDOR_URL", "http://vendor:8080")
@@ -36,7 +51,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "rest_framework",
     "drf_spectacular",
-    "ledger",
+    "ledger.apps.LedgerConfig",
 ]
 
 MIDDLEWARE = [
@@ -48,6 +63,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "ledger.middleware.IdleTimeoutMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -73,15 +89,21 @@ APPEND_SLASH = False
 
 REST_FRAMEWORK = {
     # Auth lands in a later stage: add the classes / a global IsAuthenticated here.
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": [],
-    "UNAUTHENTICATED_USER": None,
+    "DEFAULT_AUTHENTICATION_CLASSES": ["ledger.permissions.SessionAuth401"],
+    "DEFAULT_PERMISSION_CLASSES": ["ledger.permissions.AuthIfFlagOn"],
+    "NUM_PROXIES": 1 if TRUST_PROXY else 0,
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "EXCEPTION_HANDLER": "ledger.errors.exception_handler",
-    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    "DEFAULT_THROTTLE_CLASSES": ["ledger.throttles.ScopedUserThrottle"],
     # Per-IP until auth lands (locmem cache: per process; fine for one api container).
-    "DEFAULT_THROTTLE_RATES": {"reads": "300/min", "writes": "30/min", "sync": "6/min"},
+    "DEFAULT_THROTTLE_RATES": {
+        "reads": "300/min",
+        "writes": "30/min",
+        "sync": "6/min",
+        "login_ip": "5/min",
+        "login_user": "20/hour",
+    },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 

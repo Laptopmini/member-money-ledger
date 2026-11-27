@@ -54,6 +54,8 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
             envelope("server_error", "Something went wrong on our side.", rid), status=500
         )
     code, message = _DEFAULTS.get(response.status_code, ("error", "Request failed."))
+    if response.status_code == 403 and "CSRF" in str(getattr(exc, "detail", "")):
+        code, message = "csrf_failed", "Your session check failed. Reload the page and try again."
     if isinstance(exc, exceptions.ParseError):
         code = "bad_request"
     response.data = envelope(code, message, rid)
