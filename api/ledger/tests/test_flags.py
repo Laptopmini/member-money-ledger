@@ -68,3 +68,28 @@ def test_real_provider_pointed_at_dead_host_falls_back(monkeypatch):
         api.clear_providers()
     assert time.monotonic() - started < 5
     assert flags._down_until > 0  # the failure path ran and the 30 s back-off is set
+
+
+def test_provider_is_awaited_not_fire_and_forget(monkeypatch):
+    """Regression: set_provider() returns before flagd is connected, so the first lookup in a
+    fresh process saw PROVIDER_NOT_READY and fell back. We must use set_provider_and_wait."""
+    from openfeature import api
+
+    calls = []
+    monkeypatch.setattr(api, "set_provider_and_wait", lambda p: calls.append(p))
+    monkeypatch.setattr(api, "set_provider", lambda p: calls.append("NOWAIT"))
+    monkeypatch.setattr(api, "clear_providers", lambda: None)
+    monkeypatch.setattr(flags, "_provider_ready", False)
+
+    class Details:
+        error_code = None
+        reason = "STATIC"
+        value = True
+
+    class Client:
+        def get_boolean_details(self, key, default):
+            return Details()
+
+    monkeypatch.setattr(api, "get_client", lambda: Client())
+    assert flags._evaluate("merchant-rules", False) is True
+    assert len(calls) == 1 and calls[0] != "NOWAIT"
