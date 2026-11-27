@@ -126,6 +126,11 @@ export function useRecategorize() {
       return { snapshot };
     },
     onError: (err, vars, ctx) => {
+      if (err.code === "vendor_unconfirmed") {
+        // The change may have been saved: keep the optimistic row and let the refetch decide.
+        toast({ kind: "error", message: err.message });
+        return;
+      }
       for (const [key, data] of ctx?.snapshot ?? []) qc.setQueryData(key, data);
       if (err.status === 409) {
         toast({

@@ -38,12 +38,31 @@ function readCookie(name: string): string | undefined {
   return undefined;
 }
 
+// Real user input, not polling, keeps the session alive (trap 18). Interval and focus refetches
+// that happen without recent input must not send the header.
+const ACTIVITY_WINDOW_MS = 60_000;
+let lastInteraction = Number.NEGATIVE_INFINITY;
+
+export function markInteraction(at: number = Date.now()) {
+  lastInteraction = at;
+}
+
+export function hasRecentInteraction(now: number = Date.now()): boolean {
+  return now - lastInteraction <= ACTIVITY_WINDOW_MS;
+}
+
+if (typeof window !== "undefined") {
+  for (const type of ["pointerdown", "keydown", "wheel"] as const) {
+    window.addEventListener(type, () => markInteraction(), { passive: true });
+  }
+}
+
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export type FetchOptions = {
   method?: string;
   body?: unknown;
-  /** Only for user-initiated requests. Background queries must never set it (trap 18). */
+  /** Force the header on (mutations). Otherwise it is sent only after recent real input. */
   userActivity?: boolean;
   signal?: AbortSignal;
 };
@@ -52,11 +71,16 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
   const method = (opts.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  let body = opts.body === undefined ? undefined : JSON.stringify(opts.body);
   if (UNSAFE.has(method)) {
+    // The API answers 415 to unsafe requests without a JSON content type, even with no payload.
+    headers["Content-Type"] = "application/json";
+    if (body === undefined) body = "{}";
     const token = readCookie("csrftoken");
     if (token) headers["X-CSRFToken"] = token;
   }
-  if (opts.userActivity === true) headers["X-User-Activity"] = "1";
+  if (opts.userActivity === true || (opts.userActivity !== false && hasRecentInteraction()))
+    headers["X-User-Activity"] = "1";
 
   let res: Response;
   try {
@@ -64,7 +88,7 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
       method,
       headers,
       credentials: "same-origin",
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body,
       signal: opts.signal,
     });
   } catch (e) {

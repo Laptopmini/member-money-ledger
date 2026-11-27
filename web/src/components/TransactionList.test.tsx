@@ -117,4 +117,30 @@ describe("TransactionList", () => {
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     await waitFor(() => expect(select).toHaveValue(""));
   });
+
+  it("does not roll back on vendor_unconfirmed and refetches instead", async () => {
+    const calls = mockApi([txn()], () =>
+      jsonResponse(
+        {
+          error: {
+            code: "vendor_unconfirmed",
+            message: "Your change may have been saved. Refresh to check.",
+            request_id: "r",
+          },
+        },
+        502,
+      ),
+    );
+    renderWithProviders(<TransactionList />);
+    const select = await screen.findByRole("combobox", { name: "Category for Delta Air Lines" });
+    await screen.findByRole("option", { name: "Travel" });
+    const before = calls.filter((c) => c.url.startsWith("/api/transactions?")).length;
+    await userEvent.selectOptions(select, "travel");
+    expect(await screen.findByText(/may have been saved/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(calls.filter((c) => c.url.startsWith("/api/transactions?")).length).toBeGreaterThan(
+        before,
+      ),
+    );
+  });
 });

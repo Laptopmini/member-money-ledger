@@ -11,6 +11,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     env: { TZ: "America/Los_Angeles" },
     css: false,
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
   },
   server: {
     port: 5173,
