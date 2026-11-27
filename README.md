@@ -138,23 +138,21 @@ See `docs/security.md` for the threat model.
 
 ## Stretch goals / TODO
 
-- [ ] **Claude Design handback, higher fidelity.** Done so far:
-  - Tokens, icons and the visual layer.
-  - The detail drawer with audit history.
-  - The account menu.
-  - Icon Refresh with the sync dot.
-  - The summary card restyled like the mockup.
-  - Filter actions now scroll to and focus the transactions table.
+- [x] **Claude Design handback adopted as the spec.** `web/src/styles/handback.css` is the
+  handback's `base.css`, and the markup follows `screens/*.html`. Done:
+  - Overview, including the mobile filter sheet.
+  - Detail drawer: radio-grid picker, editable description, `?txn=` deep link.
+  - Login and session dialog.
+  - Empty, error and offline states.
+  - Inline rule prompt and stale-edit note.
 
-  Still open against `docs/design/handback/screens/app-overview.html`:
-  - The container-query app shell and grid from `base.css`.
-  - The month `<select>` in the picker.
-  - Net on its own row with its caption.
-  - The pending row in the category list.
-  - The table row and filter-bar design.
-  - The mobile filter sheet.
-  - The drawer's radio-grid category picker and editable description.
-  - A `?txn=` deep link to the drawer.
+  Remaining small gaps:
+  - Pending-by-category and "N deposits" captions (need summary API fields).
+  - The cloud-off icon.
+  - Arrow-key navigation in the account menu.
+  - Suggestion chip "Thinking…" state.
+  - The mock's "posted at $X (was $Y)" detail on stale edits.
+  - The product name stays **Ledger**; the mockups use the client's brand.
 - [ ] The vendor-down E2E is timing-sensitive: the sync worker can hold the sync lock while it
   waits on the stopped vendor. It passed on rerun; give it a deterministic wait.
 - [x] Merchant rules (`merchant-rules`, off by default): turn it on in `flags/flags.json` to demo

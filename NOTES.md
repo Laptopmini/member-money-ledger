@@ -149,9 +149,8 @@ live log with timestamps is `docs/ai-log.md`. The specifics:
 
 ## What I'd do with another day
 
-- **Finish the design handback's structural pieces:** the transaction detail drawer with its
-  audit history (the API exists), the container-query app shell, the account menu, and the
-  mobile filter sheet. The tokens and visual layer are already applied.
+- **Close the last design gaps** (see the README TODO): pending-by-category and deposit
+  captions need two small summary API fields.
 - **Run the suggestion eval with the local model actually serving.** During the build, LM
   Studio timed out on every call, so the 0/15 we got measures availability, not accuracy.
   Member corrections would then become the next eval set.
