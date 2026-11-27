@@ -1,0 +1,113 @@
+{
+  "_note": "Response shapes of our API (/api/...), not the vendor's. Money is integer cents; format at the edge. Dates are local YYYY-MM-DD strings. Errors always use the same envelope.",
+  "GET /api/transactions?category=uncategorized&from=2026-10-01&to=2026-10-31&limit=50": {
+    "results": [
+      {
+        "id": "txn_000004",
+        "account_id": "acc_card",
+        "account_label": "Card",
+        "posted_on": "2026-10-14",
+        "amount_cents": 31275,
+        "direction": "debit",
+        "signed_cents": -31275,
+        "currency": "USD",
+        "merchant": "Delta Air Lines",
+        "description": "AUS to SFO",
+        "category": null,
+        "category_label": "Uncategorized",
+        "category_known": true,
+        "status": "pending",
+        "kind": "spend",
+        "updated_at": "2026-10-14T22:18:40Z"
+      }
+    ],
+    "next_cursor": null,
+    "synced_at": "2026-11-27T18:40:02Z"
+  },
+  "GET /api/transactions (row kinds)": {
+    "_kinds": "kind is one of: income | spend | refund | transfer | uncategorized_credit | excluded_currency",
+    "refund_example": {
+      "id": "txn_000005", "posted_on": "2026-10-14", "amount_cents": 2400, "direction": "credit",
+      "signed_cents": 2400, "merchant": "Figma", "description": "Refund: duplicate seat",
+      "category": "software", "category_label": "Software & subscriptions", "status": "posted", "kind": "refund"
+    },
+    "unknown_synced_category_example": {
+      "id": "txn_000031", "category": "groceries", "category_label": "groceries", "category_known": false, "kind": "spend"
+    }
+  },
+  "GET /api/summary?month=2026-10": {
+    "month": "2026-10",
+    "income_cents": 850000,
+    "spend_cents": 4599,
+    "net_cents": 845401,
+    "pending_cents": 31275,
+    "pending_count": 1,
+    "uncategorized_count": 1,
+    "uncategorized_credit_cents": 0,
+    "uncategorized_credit_count": 0,
+    "excluded_currency_count": 0,
+    "by_category": [
+      { "category": "meals", "label": "Meals", "spend_cents": 4599, "count": 1 },
+      { "category": "software", "label": "Software & subscriptions", "spend_cents": 0, "count": 2 }
+    ],
+    "latest_month_with_data": "2026-10",
+    "synced_at": "2026-11-27T18:40:02Z"
+  },
+  "GET /api/summary?month=2026-11 (empty)": {
+    "month": "2026-11", "income_cents": 0, "spend_cents": 0, "net_cents": 0, "pending_cents": 0,
+    "pending_count": 0, "uncategorized_count": 0, "by_category": [],
+    "latest_month_with_data": "2026-10", "synced_at": "2026-11-27T18:40:02Z"
+  },
+  "GET /api/categories": {
+    "results": [
+      { "key": "income", "label": "Income", "schedule_c_line": "1", "deductible_fraction": 0, "kind": "income" },
+      { "key": "transfer", "label": "Transfer", "schedule_c_line": null, "deductible_fraction": 0, "kind": "transfer" },
+      { "key": "meals", "label": "Meals", "schedule_c_line": "24b", "deductible_fraction": 0.5, "kind": "expense" }
+    ]
+  },
+  "PATCH /api/transactions/txn_000004 {category, expected_updated_at}": {
+    "200": { "id": "txn_000004", "category": "travel", "category_label": "Travel", "updated_at": "2026-11-27T18:41:10Z", "kind": "spend" },
+    "400": { "error": { "code": "invalid_category", "message": "Pick a category from the list.", "request_id": "b1e2…" } },
+    "409": { "error": { "code": "stale", "message": "This transaction changed in your bank feed. Review and try again.", "request_id": "…" } },
+    "502": { "error": { "code": "vendor_unavailable", "message": "We couldn't reach your bank feed. Nothing was changed. Try again in a moment.", "request_id": "…" } }
+  },
+  "GET /api/transactions/txn_000004/history": {
+    "results": [
+      { "at": "2026-11-27T18:41:10Z", "actor": "you", "action": "recategorize", "before": { "category": null }, "after": { "category": "travel" } },
+      { "at": "2026-11-27T18:40:02Z", "actor": "sync", "action": "synced", "before": null, "after": { "status": "pending" } }
+    ]
+  },
+  "POST /api/sync": { "202": { "status": "running" }, "429": { "error": { "code": "throttled", "message": "Refreshing too often. Try again in 10 seconds." } } },
+  "GET /api/sync/status": {
+    "last_success_at": "2026-11-27T18:40:02Z",
+    "last_attempt_at": "2026-11-27T18:40:02Z",
+    "state": "ok",
+    "_states": "ok | running | vendor_down | never",
+    "stale": false,
+    "rejected_count": 0
+  },
+  "GET /api/tax/set-aside?quarter=2026-Q4": {
+    "quarter": "2026-Q4",
+    "period_start": "2026-09-01",
+    "period_end": "2026-12-31",
+    "due_on": "2027-01-15",
+    "rate": 0.25,
+    "income_cents": 850000,
+    "deductible_cents": 2300,
+    "profit_cents": 847700,
+    "estimate_cents": 211925,
+    "set_aside_cents": 120000,
+    "gap_cents": 91925,
+    "status": "behind",
+    "uncategorized_debit_count": 1,
+    "uncategorized_debit_cents": 31275,
+    "potential_reduction_cents": 7819,
+    "disclaimer": "An estimate, not tax advice."
+  },
+  "POST /api/auth/login": {
+    "200": { "user": { "email": "member@example.com", "name": "Sam" }, "idle_timeout_seconds": 900 },
+    "400": { "error": { "code": "invalid_credentials", "message": "That email and password don't match." } },
+    "429": { "error": { "code": "throttled", "message": "Too many attempts. Try again in a minute." } }
+  },
+  "any 401": { "error": { "code": "not_authenticated", "message": "Please sign in." } }
+}
