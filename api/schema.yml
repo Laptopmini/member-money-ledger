@@ -1,0 +1,678 @@
+openapi: 3.0.3
+info:
+  title: Member Money Ledger API
+  version: 1.0.0
+  description: Mirror of the Ledgerly bank feed with recategorize write-through.
+paths:
+  /api/categories:
+    get:
+      operationId: listCategories
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      tags:
+      - categories
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryList'
+          description: ''
+  /api/health:
+    get:
+      operationId: getHealth
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+  /api/summary:
+    get:
+      operationId: getSummary
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM
+        required: true
+      tags:
+      - summary
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Summary'
+          description: ''
+        '304':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/sync:
+    post:
+      operationId: runSync
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      tags:
+      - sync
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/sync/status:
+    get:
+      operationId: getSyncStatus
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      tags:
+      - sync
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncStatus'
+          description: ''
+  /api/transactions:
+    get:
+      operationId: listTransactions
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      parameters:
+      - in: query
+        name: account
+        schema:
+          type: string
+      - in: query
+        name: category
+        schema:
+          type: array
+          items:
+            type: string
+        description: key, or `uncategorized`
+      - in: query
+        name: cursor
+        schema:
+          type: string
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: YYYY-MM-DD, inclusive
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 1..200, default 50
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: merchant/description contains
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - pending
+          - posted
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: YYYY-MM-DD, inclusive
+      tags:
+      - transactions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/transactions/{txn_id}:
+    get:
+      operationId: getTransaction
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      parameters:
+      - in: path
+        name: txn_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - transactions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    patch:
+      operationId: updateTransaction
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      parameters:
+      - in: path
+        name: txn_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTransactionPatchRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/transactions/{txn_id}/history:
+    get:
+      operationId: getTransactionHistory
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+      parameters:
+      - in: path
+        name: txn_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - transactions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/History'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+components:
+  schemas:
+    Category:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        schedule_c_line:
+          type: string
+          nullable: true
+        deductible_fraction:
+          type: number
+          format: double
+        kind:
+          $ref: '#/components/schemas/CategoryKindEnum'
+      required:
+      - deductible_fraction
+      - key
+      - kind
+      - label
+      - schedule_c_line
+    CategoryBreakdown:
+      type: object
+      properties:
+        category:
+          type: string
+          nullable: true
+        label:
+          type: string
+        spend_cents:
+          type: integer
+        count:
+          type: integer
+      required:
+      - category
+      - count
+      - label
+      - spend_cents
+    CategoryKindEnum:
+      enum:
+      - income
+      - transfer
+      - personal
+      - expense
+      type: string
+      description: |-
+        * `income` - income
+        * `transfer` - transfer
+        * `personal` - personal
+        * `expense` - expense
+    CategoryList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+      required:
+      - results
+    DbEnum:
+      enum:
+      - ok
+      - error
+      type: string
+      description: |-
+        * `ok` - ok
+        * `error` - error
+    DirectionEnum:
+      enum:
+      - debit
+      - credit
+      type: string
+      description: |-
+        * `debit` - debit
+        * `credit` - credit
+    Error:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+      required:
+      - error
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+      required:
+      - code
+      - message
+      - request_id
+    Health:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/HealthStatusEnum'
+        db:
+          $ref: '#/components/schemas/DbEnum'
+        vendor:
+          $ref: '#/components/schemas/VendorEnum'
+      required:
+      - db
+      - status
+      - vendor
+    HealthStatusEnum:
+      enum:
+      - ok
+      - degraded
+      type: string
+      description: |-
+        * `ok` - ok
+        * `degraded` - degraded
+    History:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEvent'
+      required:
+      - results
+    HistoryEvent:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        actor:
+          type: string
+        action:
+          type: string
+        before:
+          nullable: true
+        after:
+          nullable: true
+      required:
+      - action
+      - actor
+      - after
+      - at
+      - before
+    PatchedTransactionPatchRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 2000
+        expected_updated_at:
+          type: string
+          format: date-time
+    RowKindEnum:
+      enum:
+      - income
+      - spend
+      - refund
+      - transfer
+      - uncategorized_credit
+      - excluded_currency
+      type: string
+      description: |-
+        * `income` - income
+        * `spend` - spend
+        * `refund` - refund
+        * `transfer` - transfer
+        * `uncategorized_credit` - uncategorized_credit
+        * `excluded_currency` - excluded_currency
+    Summary:
+      type: object
+      properties:
+        month:
+          type: string
+        income_cents:
+          type: integer
+        spend_cents:
+          type: integer
+        net_cents:
+          type: integer
+        pending_cents:
+          type: integer
+        pending_count:
+          type: integer
+        uncategorized_count:
+          type: integer
+        uncategorized_credit_cents:
+          type: integer
+        uncategorized_credit_count:
+          type: integer
+        excluded_currency_count:
+          type: integer
+        by_category:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryBreakdown'
+        latest_month_with_data:
+          type: string
+          nullable: true
+        synced_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - by_category
+      - excluded_currency_count
+      - income_cents
+      - latest_month_with_data
+      - month
+      - net_cents
+      - pending_cents
+      - pending_count
+      - spend_cents
+      - synced_at
+      - uncategorized_count
+      - uncategorized_credit_cents
+      - uncategorized_credit_count
+    SyncResult:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/SyncResultStatusEnum'
+        fetched:
+          type: integer
+        upserted:
+          type: integer
+        rejected:
+          type: integer
+        tombstoned:
+          type: integer
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - fetched
+      - finished_at
+      - rejected
+      - status
+      - tombstoned
+      - upserted
+    SyncResultStatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
+    SyncStateEnum:
+      enum:
+      - ok
+      - running
+      - vendor_down
+      - never
+      type: string
+      description: |-
+        * `ok` - ok
+        * `running` - running
+        * `vendor_down` - vendor_down
+        * `never` - never
+    SyncStatus:
+      type: object
+      properties:
+        last_success_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+        state:
+          $ref: '#/components/schemas/SyncStateEnum'
+        stale:
+          type: boolean
+        rejected_count:
+          type: integer
+      required:
+      - last_attempt_at
+      - last_success_at
+      - rejected_count
+      - stale
+      - state
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        account_id:
+          type: string
+          readOnly: true
+        account_label:
+          type: string
+          readOnly: true
+        posted_on:
+          type: string
+          format: date
+          readOnly: true
+        amount_cents:
+          type: integer
+          readOnly: true
+        direction:
+          allOf:
+          - $ref: '#/components/schemas/DirectionEnum'
+          readOnly: true
+        signed_cents:
+          type: integer
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        merchant:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+          nullable: true
+        category_label:
+          type: string
+          readOnly: true
+        category_known:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TransactionStatusEnum'
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/RowKindEnum'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - account_id
+      - account_label
+      - amount_cents
+      - category
+      - category_known
+      - category_label
+      - currency
+      - description
+      - direction
+      - id
+      - kind
+      - merchant
+      - posted_on
+      - signed_cents
+      - status
+      - updated_at
+    TransactionList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        next_cursor:
+          type: string
+          nullable: true
+        synced_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - next_cursor
+      - results
+      - synced_at
+    TransactionStatusEnum:
+      enum:
+      - pending
+      - posted
+      type: string
+      description: |-
+        * `pending` - pending
+        * `posted` - posted
+    VendorEnum:
+      enum:
+      - ok
+      - down
+      type: string
+      description: |-
+        * `ok` - ok
+        * `down` - down
