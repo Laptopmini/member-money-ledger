@@ -1,7 +1,9 @@
 """Feature flags via OpenFeature + flagd (ADR 0008). Evaluated server-side; the web only mirrors.
 
-`flag()` never raises and never blocks for long: results are cached for a few seconds, and a
-failed provider setup/evaluation falls back to the code default (and is not retried for 30 s).
+`flag()` never raises and never blocks for long: results are cached for a few seconds. A failed
+provider setup, an exception, or an evaluation whose details carry an error code / ERROR reason
+(what the SDK reports for an unreachable flagd) counts as "down": the code default is returned
+and flagd is not retried for 30 s.
 """
 
 import logging
@@ -32,6 +34,7 @@ def _evaluate(key: str, default: bool) -> bool:
     global _provider_ready
     from openfeature import api
     from openfeature.contrib.provider.flagd import FlagdProvider
+    from openfeature.flag_evaluation import Reason
 
     if not _provider_ready:
         api.set_provider(
@@ -43,7 +46,10 @@ def _evaluate(key: str, default: bool) -> bool:
             )
         )
         _provider_ready = True
-    return bool(api.get_client().get_boolean_value(key, default))
+    details = api.get_client().get_boolean_details(key, default)
+    if details.error_code is not None or details.reason == Reason.ERROR:
+        raise RuntimeError("flag provider error")
+    return bool(details.value)
 
 
 def flag(key: str, default: bool | None = None) -> bool:
