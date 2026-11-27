@@ -6,3 +6,14 @@ Appended live: where AI helped and where it was wrong, with specifics. Newest at
 |---|---|---|---|---|
 | 18:20 | main (Opus) | Helped | Found 14 traps at T0 that the pre-session analysis missed, including that settled rule #7 (`>=` upsert) contradicts rule #11 after a vendor restart | Owner accepted ADR 0019 |
 | 18:30 | main (Opus) | Wrong (tooling) | Assumed newly written `.claude/agents/*.md` would be spawnable mid-session; the harness only loads agent types at session start | Spawned `general-purpose` with the definition's model and told it to read its definition file |
+| 18:39 | harness | Note | The custom agent types did become spawnable later in the session (around T+22), after the first delegations had already gone out as `general-purpose` | Later delegations use the named types |
+| 18:39 | tech writer (Sonnet) | Helped | Wrote 21 ADRs + security/roles/index in ~80 s, and added limitation lines nobody asked for (kept: they're accurate) | Spot-checked 0019 against the plan |
+| 18:42 | backend (Sonnet) | Wrong | Used `django.utils.timezone.utc`, removed in Django 6 → `GET /api/transactions` 500; the 500 envelope hid the cause until `exc_info` was logged | Fixed with `datetime.UTC` |
+| 18:42 | backend (Sonnet) | Wrong | First sync never recovered a row inserted into the vendor mid-listing (offset drift duplicates one row and hides another) | QA's parallel `test_duplicate_rows_harmless` caught it; fix re-lists up to 3 passes on a duplicate id |
+| 18:42 | backend (Sonnet) | Wrong | Ran `ruff format .` over QA's in-progress test files (outside its ownership) | Formatting only; noted |
+| 18:42 | qa (Sonnet) | Helped | Wrote 7 test files / 121 passing tests against an agreed interface while the code was being written; a fake vendor reproducing every vendor quirk | — |
+| 18:45 | devops (Haiku) | Wrong | Picked Python 3.15 without checking wheels for every pin; `cachebox<6` (via openfeature-provider-flagd) has no cp315 wheel | Build failed; pinned 3.14.10; logged upstream gap |
+| 18:45 | devops (Haiku) | Wrong | Postgres 19 image refused the PG16 volume at the old mount path | db logs; new `pgdata19` volume at `/var/lib/postgresql` |
+| 18:45 | devops (Haiku) | Wrong | `biome migrate --write` silently disabled every lint rule (`preset: "none"`) | Caught on next check; restored recommended |
+| 18:45 | devops (Haiku) | Wrong | Added a `# syntax=` Dockerfile line, which pulls a frontend image at build time (breaks offline) | Self-caught; removed |
+| 18:45 | qa (Sonnet) | Wrong | Tests had 5 mypy errors and 2 E501 (HTTPError headers as `{}`, untyped dicts) | Main session fixed while committing; relaxed `disallow_untyped_defs` for tests only |
