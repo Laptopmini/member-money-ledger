@@ -39,7 +39,12 @@ test("set-aside A (trap 20): estimate shown, mark $1,000 moves the progress bar"
   const before = await setAside(page);
   expect(before.estimate_cents).toBe(211925);
   await expect(c.getByText("$2,119.25", { exact: true }).first()).toBeVisible();
-  await expect(c.getByText(`${money(before.gap_cents)} behind`)).toBeVisible();
+  // Marks are append-only and survive reset_mirror, so earlier runs may already cover the gap.
+  if (before.gap_cents > 0) {
+    await expect(c.getByText(`${money(before.gap_cents)} behind`)).toBeVisible();
+  } else {
+    await expect(c.getByText("On track")).toBeVisible();
+  }
 
   await c.getByRole("button", { name: "Mark as set aside" }).click();
   await c.getByLabel("Amount set aside ($)").fill("1000.00");
