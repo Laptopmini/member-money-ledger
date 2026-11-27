@@ -133,6 +133,9 @@ live log with timestamps is `docs/ai-log.md`. The specifics:
   refetches repaired the cache. That's AI producing plausible code whose tests prove nothing.
 - **Logic duplicated and drifted.** The frontend duplicated the backend's classification rule,
   and the copy had already drifted (a chargeback was shown as spend).
+- **A test gap only E2E caught.** Every tax unit test ran with auth off, so none saw that
+  `request.user` is a lazy object when signed in: "Mark as set aside" returned 500. The E2E
+  agent found it by running the real flow.
 - **APIs from memory.** The backend used `django.utils.timezone.utc`, removed in Django 6, and
   the 500 envelope hid it. The devops agent picked Python 3.15 without checking every
   dependency had a wheel for it, and a `biome migrate` silently disabled every lint rule.
@@ -146,15 +149,34 @@ live log with timestamps is `docs/ai-log.md`. The specifics:
 
 ## What I'd do with another day
 
-- **Apply the Claude Design handback.** The tokens are structured for it; see the README.
-- **Merchant rules** (ADR 0018), then **AI category suggestions** for unseen merchants through
-  any OpenAI-compatible endpoint, as suggestions only, with an eval set. Both are designed and
-  flagged off.
-- **Reconcile deletions** visibly ("this transaction disappeared from your bank feed").
-- **A shared cache for throttles** (they're per gunicorn worker today), a real `Member` foreign
-  key on transactions (queries already go through a member scope), and TLS in the prod profile.
+- **Finish the design handback's structural pieces:** the transaction detail drawer with its
+  audit history (the API exists), the container-query app shell, the account menu, and the
+  mobile filter sheet. The tokens and visual layer are already applied.
+- **Run the suggestion eval with the local model actually serving.** During the build, LM
+  Studio timed out on every call, so the 0/15 we got measures availability, not accuracy.
+  Member corrections would then become the next eval set.
+- **Reconcile deletions visibly** ("this transaction disappeared from your bank feed").
+- **Production fixes:**
+  - Throttles in Redis instead of the database cache.
+  - A real `Member` foreign key on transactions; queries already go through a member scope.
+  - TLS in the prod profile.
+  - Database-enforced append-only audit and set-aside marks.
 - **Instrument the events above** and run the holdout.
 
 ## Time spent
 
-_Filled in at close from `docs/process/03-execution-log.md`._
+From `docs/process/03-execution-log.md` (UTC; T0 = 18:16:53Z):
+
+| Milestone | Time | T+ |
+|---|---|---|
+| Readback, 11 owner decisions, plan approved | 18:28 | 12 |
+| Stage 1 foundations committed (docs, ADRs, deps, tooling) | 18:46 | 29 |
+| Must tier: API + web + tests green, both reviews applied | 18:56 | 39 |
+| Should tier: auth, idle timeout, flags, tax set-aside, CI | 19:09 | 52 |
+| Could tier: merchant rules, AI suggestions; E2E 10/10 | 19:16 | 59 |
+| Design handback applied | 19:16 | 60 |
+| Freeze, docs and final gates | 19:17–19:31 | 60–75 |
+
+The build ran from 18:16:53Z to the final commit, inside the 90-minute box. The owner's
+own time was in the Claude Design session and in answering 15 decision questions, in 4
+batches.
