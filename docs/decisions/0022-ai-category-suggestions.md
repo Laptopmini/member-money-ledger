@@ -37,3 +37,15 @@ all matter more than novelty.
 - A cloud endpoint sends merchant names to a third party. That needs a DPA and a member-facing
   disclosure before it's turned on in production.
 - Per-merchant caching makes cost roughly O(unique merchants), not O(transactions).
+
+## Status of the eval (2026-11-27, end of the build)
+The feature is built and unit-tested (mocked endpoint): enum-constrained output, cache, rules
+take precedence, data minimization, and graceful failure. The live eval against LM Studio
+(`google/gemma-4-26b-a4b`) **has not produced a quality result yet**. During the build, every
+call timed out (8 s) or returned an HTTP error, and a direct `curl` to
+`/v1/chat/completions` timed out after 30 s, so the model wasn't serving. The 0/15 recorded
+measures availability, not accuracy. The owner chose to defer the rerun. Next step: load the
+model in LM Studio, then run
+`docker compose exec -e LLM_BASE_URL=http://host.docker.internal:1234/v1 -e LLM_MODEL=google/gemma-4-26b-a4b api python manage.py eval_suggestions --no-cache`.
+Also check whether LM Studio's build supports `response_format: json_schema` (the client falls
+back to extracting JSON from text). Some of the HTTP errors may have been a 400 on that field.
