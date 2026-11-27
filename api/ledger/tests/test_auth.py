@@ -178,3 +178,13 @@ def test_audit_actor_is_user_email(db, auth_on):
         user = get_user_model().objects.get(email=DEMO_EMAIL)
 
     assert actor_label(R()) == DEMO_EMAIL  # type: ignore[arg-type]
+
+
+def test_signed_in_set_aside_mark(db, auth_on):
+    """Regression (found by E2E): request.user is a SimpleLazyObject when signed in;
+    tests with auth off got a real User and missed the 500 on `type(member).objects`."""
+    api = login()
+    r = api.post(
+        "/api/tax/set-aside-marks", {"quarter": "2026-Q4", "amount_cents": 1000}, format="json"
+    )
+    assert r.status_code == 201, r.content

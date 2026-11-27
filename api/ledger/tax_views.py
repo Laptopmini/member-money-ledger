@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Sum
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -164,7 +165,8 @@ class SetAsideMarkView(LedgerView):
         reason = ser.validated_data.get("reason", "").strip()
         with transaction.atomic():
             # Serialize marks per member so two reversals can't both pass the floor check.
-            type(member).objects.select_for_update().get(pk=member.pk)
+            # request.user is a SimpleLazyObject, so type(member) has no manager: use the model.
+            get_user_model().objects.select_for_update().get(pk=member.pk)
             if _marks_total(member, quarter) + amount < 0:
                 raise ApiError(400, "invalid_amount", "That would put the total below zero.")
             mark = SetAsideMark.objects.create(
