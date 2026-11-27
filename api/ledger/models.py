@@ -1,5 +1,7 @@
+from decimal import Decimal
 from typing import Any
 
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import F
 from django.utils import timezone
@@ -155,3 +157,31 @@ class DataVersion(models.Model):
     @classmethod
     def current(cls) -> int:
         return cls.objects.filter(id=1).values_list("version", flat=True).first() or 0
+
+
+class TaxSettings(models.Model):
+    member = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    rate = models.DecimalField(max_digits=4, decimal_places=3, default=Decimal("0.25"))
+
+    def __str__(self) -> str:
+        return f"rate {self.rate}"
+
+
+class SetAsideMark(models.Model):
+    """Money the member says they put aside for a quarter. Append-only."""
+
+    member = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    quarter = models.CharField(max_length=7, db_index=True)  # "2026-Q4"
+    amount_cents = models.BigIntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self) -> str:
+        return f"{self.quarter} {self.amount_cents}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding:
+            raise AppendOnlyError("SetAsideMark is append-only")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        raise AppendOnlyError("SetAsideMark is append-only")
