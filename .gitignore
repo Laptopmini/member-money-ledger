@@ -1,3 +1,12 @@
 node_modules/
 __pycache__/
 *.pyc
+.env
+web/dist
+dist/
+.pytest_cache
+.mypy_cache
+.ruff_cache
+playwright-report
+test-results
+*.log
