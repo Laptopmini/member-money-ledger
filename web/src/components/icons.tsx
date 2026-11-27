@@ -1,12 +1,18 @@
 // Inline icons from the design handback (20x20 viewBox, currentColor). No external assets.
 import type { ReactNode } from "react";
 
-function Icon({ children, size = 16 }: { children: ReactNode; size?: number }) {
+function Icon({
+  children,
+  size = 16,
+  className = "",
+}: {
+  children: ReactNode;
+  size?: number;
+  className?: string;
+}) {
   return (
     <svg
-      className="icon"
-      width={size}
-      height={size}
+      className={`${size > 16 ? "icon" : "icon icon--sm"} ${className}`.trim()}
       viewBox="0 0 20 20"
       fill="none"
       stroke="currentColor"
@@ -21,7 +27,7 @@ function Icon({ children, size = 16 }: { children: ReactNode; size?: number }) {
   );
 }
 
-type P = { size?: number };
+type P = { size?: number; className?: string };
 export const ChevronLeft = (p: P) => (
   <Icon {...p}>
     <path d="M12.5 15 7.5 10l5-5" />
@@ -74,5 +80,38 @@ export const Lightbulb = (p: P) => (
 export const X = (p: P) => (
   <Icon {...p}>
     <path d="m5 5 10 10M15 5 5 15" />
+  </Icon>
+);
+export const Tag = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 3h6.5l7.5 7.5-6.5 6.5L3 9.5Z" />
+    <circle cx="6.5" cy="6.5" r="1" />
+  </Icon>
+);
+export const Plus = (p: P) => (
+  <Icon {...p}>
+    <path d="M10 4v12M4 10h12" />
+  </Icon>
+);
+export const Search = (p: P) => (
+  <Icon {...p}>
+    <circle cx="8.75" cy="8.75" r="5.25" />
+    <path d="m16.5 16.5-3.8-3.8" />
+  </Icon>
+);
+export const Sliders = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 6h13M6 10h8M8.5 14h3" />
+  </Icon>
+);
+export const ChevronDown = (p: P) => (
+  <Icon {...p}>
+    <path d="m5 7.5 5 5 5-5" />
+  </Icon>
+);
+export const Lock = (p: P) => (
+  <Icon {...p}>
+    <rect x="4" y="9" width="12" height="8" rx="2" />
+    <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
   </Icon>
 );

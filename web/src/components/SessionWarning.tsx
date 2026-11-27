@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useLogout } from "../api/auth";
 import { apiFetch } from "../api/client";
+import { Clock } from "./icons";
 
 const WARN_AT = 120;
 
@@ -58,19 +59,32 @@ export function SessionWarning({ expiresIn, fetchedAt }: { expiresIn: number; fe
   };
 
   return (
-    <div className="session-warning" role="dialog" aria-labelledby="sw-title" aria-modal="false">
-      <p id="sw-title" className="session-warning__title">
-        You'll be signed out in <span aria-hidden="true">{clock(remaining)}</span> for your
-        security.
-      </p>
-      <p className="visually-hidden" aria-live="polite">
-        You'll be signed out in {clock(bucket)} for your security.
-      </p>
-      <div className="session-warning__actions">
-        <button type="button" className="btn" disabled={staying} onClick={stay}>
+    <div className="dialog" role="dialog" aria-labelledby="sw-title" aria-modal="false">
+      <div className="dialog__header">
+        <span className="dialog__icon" aria-hidden="true">
+          <Clock size={20} />
+        </span>
+        <div>
+          <h2 id="sw-title" className="dialog__title">
+            Still there?
+          </h2>
+          <p className="dialog__text">
+            You'll be signed out in{" "}
+            <span className="dialog__countdown" aria-hidden="true">
+              {clock(remaining)}
+            </span>{" "}
+            for your security.
+          </p>
+          <p className="visually-hidden" aria-live="polite">
+            You'll be signed out in {clock(bucket)} for your security.
+          </p>
+        </div>
+      </div>
+      <div className="dialog__actions">
+        <button type="button" className="btn btn--primary" disabled={staying} onClick={stay}>
           Stay signed in
         </button>
-        <button type="button" className="btn btn--ghost" onClick={() => logout.mutate()}>
+        <button type="button" className="btn btn--secondary" onClick={() => logout.mutate()}>
           Sign out
         </button>
       </div>

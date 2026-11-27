@@ -1,5 +1,6 @@
 import { useRefresh, useSyncStatus } from "../api/queries";
 import { formatClockOrDate, formatRelative } from "../lib/dates";
+import { Alert, Info } from "./icons";
 
 export function useVendorDown(): boolean {
   return useSyncStatus().data?.state === "vendor_down";
@@ -15,33 +16,48 @@ export function Banners() {
   const down = data.state === "vendor_down";
 
   return (
-    <div className="banners">
+    <>
       {down && (
         <div className="banner banner--warning" role="status">
-          We can't reach your bank feed right now.
-          {last ? ` Showing data from ${formatClockOrDate(last)}.` : ""} Changes can't be saved
-          until it's back.
+          <Alert className="banner__icon" />
+          <div className="banner__body">
+            <p>
+              <span className="banner__title">We can't reach your bank feed right now.</span>
+              {last ? ` Showing data from ${formatClockOrDate(last)}.` : ""} Changes can't be saved
+              until it's back.
+            </p>
+          </div>
         </div>
       )}
       {!down && data.stale && last && (
-        <div className="banner banner--warning" role="status">
-          <span>Last updated {formatRelative(last)}.</span>
-          <button
-            type="button"
-            className="btn btn--small"
-            disabled={refresh.isPending || data.state === "running"}
-            onClick={() => refresh.mutate()}
-          >
-            Refresh
-          </button>
+        <div className="banner banner--info" role="status">
+          <Info className="banner__icon" />
+          <div className="banner__body">
+            <p>Last updated {formatRelative(last)}.</p>
+          </div>
+          <div className="banner__actions">
+            <button
+              type="button"
+              className="btn btn--secondary btn--sm"
+              disabled={refresh.isPending || data.state === "running"}
+              onClick={() => refresh.mutate()}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       )}
       {data.rejected_count > 0 && (
-        <div className="banner banner--info" role="status">
-          {data.rejected_count} {data.rejected_count === 1 ? "transaction" : "transactions"} from
-          your bank couldn't be read. We're looking into it.
+        <div className="banner banner--neutral" role="status">
+          <Info className="banner__icon" />
+          <div className="banner__body">
+            <p>
+              {data.rejected_count} {data.rejected_count === 1 ? "transaction" : "transactions"}{" "}
+              from your bank couldn't be read. We're looking into it.
+            </p>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

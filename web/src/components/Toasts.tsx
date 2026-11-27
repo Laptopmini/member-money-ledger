@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { Alert, Check, X } from "./icons";
 
 export type Toast = {
   id: number;
@@ -31,38 +32,45 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const view = (t: Toast) => (
     <div key={t.id} className={`toast toast--${t.kind}`}>
-      <span className="toast__msg">{t.message}</span>
-      {t.action && (
-        <button
-          type="button"
-          className="btn btn--small"
-          onClick={() => {
-            dismiss(t.id);
-            t.action?.run();
-          }}
-        >
-          {t.action.label}
-        </button>
-      )}
-      {t.secondary && (
-        <button
-          type="button"
-          className="btn btn--ghost btn--small"
-          onClick={() => {
-            dismiss(t.id);
-            t.secondary?.run();
-          }}
-        >
-          {t.secondary.label}
-        </button>
-      )}
+      {t.kind === "error" ? <Alert className="toast__icon" /> : <Check className="toast__icon" />}
+      <div className="toast__body">
+        <span>{t.message}</span>
+        {(t.action || t.secondary) && (
+          <div className="toast__actions">
+            {t.action && (
+              <button
+                type="button"
+                className="toast__action toast__action--primary"
+                onClick={() => {
+                  dismiss(t.id);
+                  t.action?.run();
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
+            {t.secondary && (
+              <button
+                type="button"
+                className="toast__action"
+                onClick={() => {
+                  dismiss(t.id);
+                  t.secondary?.run();
+                }}
+              >
+                {t.secondary.label}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
       <button
         type="button"
-        className="btn btn--ghost btn--small"
+        className="toast__close"
         aria-label="Dismiss"
         onClick={() => dismiss(t.id)}
       >
-        ×
+        <X />
       </button>
     </div>
   );
@@ -71,7 +79,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toasts">
+      <div className="toast-region">
         <div aria-live="polite">{toasts.filter((t) => t.kind === "success").map(view)}</div>
         <div role="alert">{toasts.filter((t) => t.kind === "error").map(view)}</div>
       </div>

@@ -2,19 +2,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFlags } from "../api/auth";
 import { useCategories, useRecategorize, useSuggestion, useTransactions } from "../api/queries";
 import type { Category, Transaction } from "../api/types";
-import { formatPostedOn, monthRange } from "../lib/dates";
+import { formatPostedOn, monthLabel, monthRange } from "../lib/dates";
 import { formatMinor } from "../lib/money";
 import { goToTransactions } from "../lib/scroll";
 import { useUrlFilters } from "../lib/useUrlFilters";
 import { useVendorDown, VENDOR_DOWN_REASON } from "./Banners";
 import { ErrorState } from "./ErrorState";
 import { Filters } from "./Filters";
-import { Clock } from "./icons";
+import { Alert, ChevronDown, Clock, Plus } from "./icons";
 import { TransactionDrawer } from "./TransactionDrawer";
 
 function Badges({ t }: { t: Transaction }) {
+  const any =
+    t.status === "pending" ||
+    t.kind === "refund" ||
+    t.kind === "transfer" ||
+    t.kind === "income" ||
+    t.kind === "excluded_currency";
+  if (!any) return null;
   return (
-    <span className="badges">
+    <span className="txn-row__amount-label">
       {t.status === "pending" && (
         <span
           className="badge badge--pending"
@@ -24,11 +31,12 @@ function Badges({ t }: { t: Transaction }) {
         </span>
       )}
       {t.kind === "refund" && <span className="badge badge--refund">Refund</span>}
-      {t.kind === "transfer" && <span className="badge badge--transfer">Transfer</span>}
+      {t.kind === "transfer" && (
+        <span className="badge badge--transfer">Transfer · not counted</span>
+      )}
       {t.kind === "income" && <span className="badge badge--income">Income</span>}
-      {t.category === null && <span className="badge badge--uncategorized">Uncategorized</span>}
       {t.kind === "excluded_currency" && (
-        <span className="badge badge--other">{t.currency}, not in totals</span>
+        <span className="badge badge--excluded">{t.currency} · not in totals</span>
       )}
     </span>
   );
@@ -49,34 +57,48 @@ function CategorySelect({
 }) {
   const saving = recat.pendingIds.has(t.id);
   const known = categories.some((c) => c.key === t.category);
+  const off = disabled || saving;
+  const uncategorized = t.category === null;
   return (
-    <select
-      className="txn-row__select"
-      aria-label={`Category for ${t.merchant}`}
-      value={t.category ?? ""}
-      disabled={disabled || saving}
-      aria-busy={saving}
+    <label
+      className={`cat-picker ${uncategorized ? "cat-picker--uncategorized" : known ? `cat--${t.category}` : "cat-picker--other"}${saving ? " is-saving" : ""}${disabled ? " is-disabled" : ""}`}
       title={disabled ? VENDOR_DOWN_REASON : undefined}
-      onChange={(e) =>
-        recat.recategorize({
-          id: t.id,
-          category: e.target.value,
-          expected_updated_at: t.updated_at,
-        })
-      }
     >
-      {t.category === null && (
-        <option value="" disabled>
-          Choose category…
-        </option>
-      )}
-      {t.category !== null && !known && <option value={t.category}>{t.category_label}</option>}
-      {categories.map((c) => (
-        <option key={c.key} value={c.key}>
-          {c.label}
-        </option>
-      ))}
-    </select>
+      {uncategorized ? <Plus /> : <span className="cat-dot" aria-hidden="true" />}
+      <span className="cat-picker__value">
+        {uncategorized ? "Uncategorized" : t.category_label}
+      </span>
+      <ChevronDown className="cat-picker__chevron" />
+      <select
+        aria-label={`Category for ${t.merchant}`}
+        value={t.category ?? ""}
+        disabled={off}
+        aria-busy={saving}
+        onChange={(e) =>
+          recat.recategorize({
+            id: t.id,
+            category: e.target.value,
+            expected_updated_at: t.updated_at,
+          })
+        }
+      >
+        {uncategorized && (
+          <option value="" disabled>
+            Choose category…
+          </option>
+        )}
+        {!uncategorized && !known && <option value={t.category ?? ""}>{t.category_label}</option>}
+        {categories.map((c) => (
+          <option
+            key={c.key}
+            value={c.key}
+            disabled={c.key === "income" && t.direction === "debit"}
+          >
+            {c.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -158,37 +180,46 @@ function Row({
   const pending = t.status === "pending";
   return (
     <li
-      className={`txn-row${pending ? " txn-row--pending" : ""}`}
+      className={`txn-row${t.kind === "income" ? " txn-row--income" : ""}${pending ? " txn-row--pending" : ""}${selected ? " is-selected" : ""}`}
       data-row-id={t.id}
       onFocus={() => setTouched(true)}
       onMouseEnter={() => setTouched(true)}
     >
-      <span className="txn-row__date">{formatPostedOn(t.posted_on)}</span>
-      <span className="txn-row__main">
+      <div className="txn-row__main">
         <button
           type="button"
-          className="txn-row__merchant txn-row__open"
+          className="txn-row__open"
           aria-haspopup="dialog"
           onClick={(e) => onOpen(t.id, e.currentTarget)}
         >
           {t.merchant}
         </button>
         {t.description && <span className="txn-row__desc">{t.description}</span>}
-        <Badges t={t} />
-      </span>
-      <span className="txn-row__account">{t.account_label}</span>
-      <span className="txn-row__category">
+      </div>
+      <div className="txn-row__meta">
+        <span className="txn-row__date">
+          <time dateTime={t.posted_on}>{formatPostedOn(t.posted_on)}</time>
+        </span>
+        <span className="txn-row__meta-sep" aria-hidden="true">
+          ·
+        </span>
+        <span className="txn-row__account">{t.account_label}</span>
+      </div>
+      <div className="txn-row__category">
         <CategorySelect t={t} categories={categories} disabled={disabled} recat={recat} />
         <SuggestionChip t={t} enabled={suggestOn && (eager || touched)} recat={recat} />
-      </span>
-      <span
-        className={`txn-row__amount amount ${credit ? "amount--credit" : "amount--debit"}${pending ? " amount--muted" : ""}`}
+      </div>
+      <div
+        className="txn-row__amount"
         title={pending ? "Pending: may change when it posts. Not in totals." : undefined}
       >
-        {credit ? "+" : "−"}
-        {formatMinor(t.amount_cents, t.currency)}
-        <span className="visually-hidden">{credit ? " credit" : " debit"}</span>
-      </span>
+        <span className={`money${credit ? " money--in" : ""}`}>
+          {credit ? "+" : "−"}
+          {formatMinor(t.amount_cents, t.currency)}
+          <span className="visually-hidden">{credit ? " credit" : " debit"}</span>
+        </span>
+        <Badges t={t} />
+      </div>
     </li>
   );
 }
@@ -242,9 +273,9 @@ export function TransactionList() {
   let body: React.ReactNode;
   if (q.isPending) {
     body = (
-      <div aria-busy="true">
+      <div aria-busy="true" className="card__body">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton skeleton--row" />
+          <span key={i} className="skeleton skeleton--option" />
         ))}
       </div>
     );
@@ -286,14 +317,14 @@ export function TransactionList() {
   } else {
     body = (
       <>
-        <div className="txn-head" aria-hidden="true">
+        <div className="txn-list__head" aria-hidden="true">
           <span>Date</span>
           <span>Merchant</span>
           <span>Account</span>
           <span>Category</span>
-          <span className="txn-head__amount">Amount</span>
+          <span className="txn-list__head-amount">Amount</span>
         </div>
-        <ul className="txn-list" aria-label="Transactions">
+        <ol className="txn-list" aria-label="Transactions">
           {rows.map((t, i) => (
             <Row
               key={t.id}
@@ -307,33 +338,41 @@ export function TransactionList() {
               selected={openId === t.id}
             />
           ))}
-        </ul>
+        </ol>
         {(q.isFetchNextPageError || q.isRefetchError) && (
-          <div className="banner banner--warning" role="alert">
+          <div className="alert alert--warning" role="alert">
+            <Alert />
             <span>
               {q.isFetchNextPageError
                 ? "Couldn't load more transactions."
-                : "Couldn't refresh these transactions. Showing what we have."}
+                : "Couldn't refresh these transactions. Showing what we have."}{" "}
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => (q.isFetchNextPageError ? q.fetchNextPage() : q.refetch())}
+              >
+                Retry
+              </button>
             </span>
-            <button
-              type="button"
-              className="btn btn--small"
-              onClick={() => (q.isFetchNextPageError ? q.fetchNextPage() : q.refetch())}
-            >
-              Retry
-            </button>
+          </div>
+        )}
+        {!q.hasNextPage && (
+          <div className="load-more">
+            <p className="load-more__end">That's everything for {monthLabel(filters.month)}.</p>
           </div>
         )}
         {q.hasNextPage && (
-          <button
-            type="button"
-            className="btn btn--block"
-            disabled={q.isFetchingNextPage}
-            aria-busy={q.isFetchingNextPage}
-            onClick={() => q.fetchNextPage()}
-          >
-            {q.isFetchingNextPage ? "Loading…" : "Load more"}
-          </button>
+          <div className="load-more">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              disabled={q.isFetchingNextPage}
+              aria-busy={q.isFetchingNextPage}
+              onClick={() => q.fetchNextPage()}
+            >
+              {q.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          </div>
         )}
       </>
     );
@@ -341,13 +380,22 @@ export function TransactionList() {
 
   return (
     <section id="transactions" className="card txns" aria-labelledby="txns-title">
-      <h2 id="txns-title" className="card__title" tabIndex={-1}>
-        Transactions
-      </h2>
+      <header className="card__header">
+        <div className="txns__header">
+          <h2 id="txns-title" className="card__title" tabIndex={-1}>
+            Transactions
+          </h2>
+          <p className="txns__count" role="status">
+            {count === null
+              ? ""
+              : `${count}${q.hasNextPage ? "+" : ""} ${count === 1 && !q.hasNextPage ? "transaction" : "transactions"} in ${monthLabel(filters.month)}`}
+          </p>
+        </div>
+      </header>
       <div className="visually-hidden" aria-live="polite">
         {announce}
       </div>
-      <Filters count={count} hasMore={!!q.hasNextPage} />
+      <Filters />
       {openId && (
         <TransactionDrawer
           txn={rows.find((r) => r.id === openId)}
@@ -366,7 +414,7 @@ export function TransactionList() {
           })()}
         />
       )}
-      {vendorDown && <p className="hint">{VENDOR_DOWN_REASON}</p>}
+      {vendorDown && <p className="field__hint">{VENDOR_DOWN_REASON}</p>}
       {body}
     </section>
   );

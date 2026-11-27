@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type Theme, useTheme } from "../lib/theme";
 import { useAuth } from "./AuthGate";
-import { ChevronRight, LogOut } from "./icons";
+import { ChevronDown, LogOut } from "./icons";
 
 const OPTIONS: { value: Theme; label: string }[] = [
   { value: "light", label: "Light" },
@@ -48,7 +48,8 @@ export function AccountMenu() {
       <button
         type="button"
         ref={btn}
-        className="btn btn--ghost btn--small account-menu__button"
+        className="btn btn--ghost btn--sm account-menu__button"
+        aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="account-menu-panel"
         onClick={() => setOpen((o) => !o)}
@@ -57,35 +58,45 @@ export function AccountMenu() {
           {name.slice(0, 1).toUpperCase()}
         </span>
         <span className="account-menu__name">{name}</span>
-        <ChevronRight />
+        <ChevronDown />
       </button>
       {open && (
         <div id="account-menu-panel" className="menu">
-          {auth && <p className="menu__identity">{auth.user.email}</p>}
-          <fieldset className="segmented">
-            <legend className="visually-hidden">Theme</legend>
-            {OPTIONS.map((o) => (
-              <label key={o.value} className="segmented__item">
-                <input
-                  type="radio"
-                  name="theme"
-                  value={o.value}
-                  checked={theme === o.value}
-                  onChange={() => setTheme(o.value)}
-                />
-                <span>{o.label}</span>
-              </label>
-            ))}
-          </fieldset>
           {auth && (
-            <button
-              type="button"
-              className="btn btn--ghost btn--small menu__item"
-              disabled={auth.signingOut}
-              onClick={auth.signOut}
-            >
-              <LogOut /> Sign out
-            </button>
+            <div className="menu__section">
+              <p className="menu__heading">Signed in as</p>
+              <p>{auth.user.email}</p>
+            </div>
+          )}
+          <div className="menu__section">
+            <p className="menu__heading">Theme</p>
+            <fieldset className="segmented">
+              <legend className="visually-hidden">Theme</legend>
+              {OPTIONS.map((o) => (
+                <label key={o.value} className="segmented__option">
+                  <input
+                    type="radio"
+                    name="theme"
+                    value={o.value}
+                    checked={theme === o.value}
+                    onChange={() => setTheme(o.value)}
+                  />
+                  <span className="segmented__label">{o.label}</span>
+                </label>
+              ))}
+            </fieldset>
+          </div>
+          {auth && (
+            <div className="menu__section">
+              <button
+                type="button"
+                className="menu__item"
+                disabled={auth.signingOut}
+                onClick={auth.signOut}
+              >
+                <LogOut /> Sign out
+              </button>
+            </div>
           )}
         </div>
       )}

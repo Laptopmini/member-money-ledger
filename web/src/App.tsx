@@ -8,11 +8,15 @@ export function App() {
   return (
     <AuthGate>
       <AppShell>
-        <div className="layout__top">
+        <div className="layout__summary">
           <Summary />
+        </div>
+        <div className="layout__setaside">
           <SetAsideCard />
         </div>
-        <TransactionList />
+        <div className="layout__txns">
+          <TransactionList />
+        </div>
       </AppShell>
     </AuthGate>
   );

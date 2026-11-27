@@ -8,6 +8,7 @@ import { ToastProvider } from "./components/Toasts";
 import { makeQueryClient } from "./lib/queryClient";
 import { applyTheme, getStoredTheme } from "./lib/theme";
 import "./styles/tokens.css";
+import "./styles/handback.css";
 import "./styles/app.css";
 
 applyTheme(getStoredTheme());
