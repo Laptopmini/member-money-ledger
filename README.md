@@ -111,8 +111,8 @@ back to its default in code (auth stays **on**). Moving to LaunchDarkly is a pro
 |---|---|---|
 | `tax-set-aside` | on | The tax set-aside card and API |
 | `auth-required` | on | Session login. Off = single-member demo without sign-in |
-| `merchant-rules` | off | "Apply to N other Figma transactions?" |
-| `category-suggestions` | off | AI category suggestions (not built yet, see TODO) |
+| `merchant-rules` | off | "Apply to N other Figma transactions?" prompt + rules on sync |
+| `category-suggestions` | off | AI suggestion chip (also needs `LLM_BASE_URL` + `LLM_MODEL`) |
 
 To toggle a flag, edit `defaultVariant` in `flags/flags.json`. flagd reloads the file on
 change; no restart is needed.
@@ -138,21 +138,23 @@ See `docs/security.md` for the threat model.
 
 ## Stretch goals / TODO
 
-- [ ] Apply the Claude Design handback (`docs/design/handoff/`) when it arrives: the tokens are
-      structured to be swapped
-- [ ] Merchant-rule prompt in the UI (backend behind `merchant-rules`)
-- [ ] AI category suggestions behind `category-suggestions`: any OpenAI-compatible
-      `/v1/chat/completions` (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`), JSON-schema response
-      constrained to our categories, cached per merchant, suggestion only. Local demo on LM
-      Studio with `google/gemma-4-26b-a4b`, plus an eval set (seed merchants → expected
-      category) with accuracy and latency
+- [x] Claude Design handback applied: tokens, icons and visual layer (`docs/design/handback/`).
+  Still to do from it: the container-query app shell, the transaction **detail drawer** with
+  audit history (the API exists: `/api/transactions/{id}/history`), the account menu, the
+  icon-only Refresh with sync dots, the mobile filter sheet, and the inline rule prompt under
+  the row
+- [x] Merchant rules (`merchant-rules`, off by default): turn it on in `flags/flags.json` to demo
+- [x] AI category suggestions (`category-suggestions` plus `LLM_BASE_URL`/`LLM_MODEL`): built and
+  unit-tested. **The local eval is still to run.** LM Studio wasn't serving during the build,
+  so it scored 0/15 on timeouts. With the model loaded, run
+  `docker compose exec -e LLM_BASE_URL=http://host.docker.internal:1234/v1 -e LLM_MODEL=google/gemma-4-26b-a4b api python manage.py eval_suggestions --no-cache`
 - [ ] Reconcile deletions visibly ("this transaction left your bank feed")
-- [ ] Transaction detail drawer with the audit history (the API exists:
-      `/api/transactions/{id}/history`)
 - [ ] Run Cloudflare's security-audit skill:
       `npx skills add https://github.com/cloudflare/security-audit-skill --skill security-audit`
-- [ ] A shared cache for throttles in multi-host deployments, and TLS in the prod profile
-- [ ] Instrument the set-aside events in `NOTES.md` and run the holdout
+- [ ] A shared cache for throttles across hosts (Redis), TLS in the prod profile, and a member
+      foreign key on transactions
+- [ ] `reset_mirror` doesn't clear set-aside marks (append-only); E2E asserts relative values
+- [ ] Instrument the set-aside events listed in `NOTES.md` and run the holdout
 
 ## More
 
