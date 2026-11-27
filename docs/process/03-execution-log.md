@@ -19,3 +19,4 @@ Times are UTC (`date -u`). Time box: T0 + 90 min, feature freeze at T0 + 75 min.
 | 2026-11-27T19:28Z | 71 | (a) done | drawer `b7d103e`, account menu + sync dot `d948e74`, tests `c03c81b` | verify green, E2E 10/10 |
 | 2026-11-27T19:33Z | 76 | Fidelity pass (owner feedback) | scroll-to-table + summary card | Owner: handback fidelity too low; filter buttons must scroll to the table. Scroll done; most fidelity gaps listed in README TODO |
 | 2026-11-27T19:35Z | 79 | Close | final gates: `make verify` green (api 210 + 1 xfail, web 69), E2E 10/10 | Vendor-down E2E flaked once (timing) and passed on rerun; noted in TODO. Execution log closed |
+| 2026-11-27T19:42Z | 85 | Final owner round | select chevron fix + handback header/filter bar/table CSS | Owner: match the handback, no clipping chevrons. verify green, E2E 10/10 on a rebuilt prod image. Remaining fidelity gaps stay in the README TODO. Log closed again |
