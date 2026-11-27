@@ -116,6 +116,8 @@ jobs:
         run: |
           curl -fsS --retry 60 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:8081
           curl -fsS --retry 60 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:8080/health
+          # The API migrates on start; wait until it answers through Caddy, not just the static page.
+          curl -fsS --retry 90 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:8081/api/health
       - uses: actions/setup-node@v7
         with:
           node-version: "26"
@@ -161,6 +163,8 @@ jobs:
         run: |
           curl -fsS --retry 60 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:8081
           curl -fsS --retry 60 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:8080/health
+          # The API migrates on start; wait until it answers through Caddy, not just the static page.
+          curl -fsS --retry 90 --retry-delay 2 --retry-all-errors -o /dev/null http://localhost:8081/api/health
       - name: Install root tooling (pinned @lhci/cli)
         run: npm ci
       - name: Lighthouse CI

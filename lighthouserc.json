@@ -2,7 +2,7 @@
   "ci": {
     "collect": {
       "url": ["http://localhost:8081/?month=2026-10"],
-      "numberOfRuns": 1
+      "numberOfRuns": 3
     },
     "assert": {
       "assertions": {
