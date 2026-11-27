@@ -10,6 +10,7 @@
     "test": "vitest run",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
+    "e2e": "playwright test",
     "types": "openapi-typescript ../api/schema.yml -o src/api/schema.d.ts"
   },
   "dependencies": {
