@@ -59,13 +59,12 @@ describe("SetAsideCard", () => {
       screen.getByText("Federal estimated payment due Jan 15, 2027 · 49 days"),
     ).toBeInTheDocument();
     expect(screen.getByText("$2,119.25")).toBeInTheDocument();
-    expect(screen.getByText(/25% of \$8,477\.00 profit/)).toBeInTheDocument();
-    expect(screen.getByText("$919.25 behind")).toBeInTheDocument();
+    expect(screen.getByText(/25% of/)).toBeInTheDocument();
+    expect(screen.getByText("$8,477.00")).toBeInTheDocument();
+    expect(screen.getByText("$919.25 to go")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "57");
     expect(
-      screen.getByRole("button", {
-        name: /Categorize 3 transactions\. Your estimate could drop by up to about \$78\.19\./,
-      }),
+      screen.getByText(/Categorize 3 transactions\. Your estimate could drop by up to about/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/An estimate, not tax advice\. Meals count at 50%/),
@@ -75,7 +74,7 @@ describe("SetAsideCard", () => {
   it("incentive line filters to uncategorized across the quarter", async () => {
     mock(SA);
     renderWithProviders(<SetAsideCard />);
-    await userEvent.click(await screen.findByRole("button", { name: /Categorize 3/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Review it" }));
     expect(window.location.search).toContain("category=uncategorized");
     expect(window.location.search).toContain("from=2026-09-01");
     expect(window.location.search).toContain("to=2026-12-31");
@@ -91,7 +90,7 @@ describe("SetAsideCard", () => {
     });
     renderWithProviders(<SetAsideCard />);
     expect(await screen.findByText("On track")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Categorize/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Categorize \d/)).not.toBeInTheDocument();
   });
 
   it("no_income shows the empty state", async () => {

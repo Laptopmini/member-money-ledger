@@ -56,10 +56,12 @@ describe("TransactionList", () => {
     renderWithProviders(<TransactionList />);
     expect(await screen.findByText("Pending", { selector: ".badge" })).toBeInTheDocument();
     expect(screen.getByText("Refund", { selector: ".badge" })).toBeInTheDocument();
-    expect(screen.getByText("Transfer", { selector: ".badge" })).toBeInTheDocument();
-    expect(screen.getByText("Uncategorized", { selector: ".badge" })).toBeInTheDocument();
+    expect(screen.getByText("Transfer · not counted", { selector: ".badge" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Uncategorized", { selector: ".cat-picker__value" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("+$24.00")).toBeInTheDocument();
-    expect(screen.getAllByText("Oct 14", { selector: ".txn-row__date" })).toHaveLength(3);
+    expect(screen.getAllByText("Oct 14", { selector: ".txn-row__date time" })).toHaveLength(3);
   });
 
   it("recategorizes optimistically, sends expected_updated_at and user activity", async () => {

@@ -32,7 +32,8 @@ describe("Summary", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(base));
     renderWithProviders(<Summary />);
     expect(await screen.findByText(/\+ \$312\.75 pending/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "1 transaction needs a category" }));
+    expect(screen.getByText(/1 transaction needs a category/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Review it" }));
     expect(window.location.search).toContain("category=uncategorized");
   });
 
@@ -105,7 +106,7 @@ describe("filter buttons scroll to the transactions", () => {
         </section>
       </>,
     );
-    await userEvent.click(await screen.findByRole("button", { name: /needs a category/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Review it" }));
     expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
     expect(screen.getByRole("heading", { name: "Transactions" })).toHaveFocus();
   });
