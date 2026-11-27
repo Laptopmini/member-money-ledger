@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useCategories, useRecategorize, useTransactions } from "../api/queries";
+import { useEffect, useMemo, useState } from "react";
+import { useFlags } from "../api/auth";
+import { useCategories, useRecategorize, useSuggestion, useTransactions } from "../api/queries";
 import type { Category, Transaction } from "../api/types";
 import { formatPostedOn, monthRange } from "../lib/dates";
 import { formatMinor } from "../lib/money";
@@ -76,21 +77,85 @@ function CategorySelect({
   );
 }
 
+let captionShown = false;
+/** Test hook: the AI caption shows only the first time a chip appears. */
+export const resetSuggestionCaption = () => {
+  captionShown = false;
+};
+
+function SuggestionChip({ t, enabled, recat }: { t: Transaction; enabled: boolean; recat: Recat }) {
+  const q = useSuggestion(t.id, enabled && t.category === null);
+  const [dismissed, setDismissed] = useState(false);
+  const [withCaption] = useState(() => {
+    const first = !captionShown;
+    return first;
+  });
+  const s = q.data;
+  const show = !dismissed && t.category === null && !!s?.category;
+  useEffect(() => {
+    if (show) captionShown = true;
+  }, [show]);
+  if (!show || !s?.category) return null;
+  return (
+    <span className="suggestion">
+      <span className="suggestion__chip">
+        <span>Suggested: {s.label ?? s.category}</span>
+        <button
+          type="button"
+          className="btn btn--small"
+          aria-label={`Accept suggestion ${s.label ?? s.category} for ${t.merchant}`}
+          disabled={recat.pendingIds.has(t.id)}
+          onClick={() =>
+            recat.recategorize({
+              id: t.id,
+              category: s.category as string,
+              expected_updated_at: t.updated_at,
+            })
+          }
+        >
+          Accept
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost btn--small"
+          aria-label={`Dismiss suggestion for ${t.merchant}`}
+          onClick={() => setDismissed(true)}
+        >
+          ×
+        </button>
+      </span>
+      {withCaption && (
+        <span className="hint">Suggestions come from an AI model and can be wrong.</span>
+      )}
+    </span>
+  );
+}
+
 function Row({
   t,
   categories,
   disabled,
   recat,
+  suggestOn,
+  eager,
 }: {
   t: Transaction;
   categories: Category[];
   disabled: boolean;
   recat: Recat;
+  suggestOn: boolean;
+  eager: boolean;
 }) {
+  const [touched, setTouched] = useState(false);
   const credit = t.direction === "credit";
   const pending = t.status === "pending";
   return (
-    <li className={`txn-row${pending ? " txn-row--pending" : ""}`} data-row-id={t.id}>
+    <li
+      className={`txn-row${pending ? " txn-row--pending" : ""}`}
+      data-row-id={t.id}
+      onFocus={() => setTouched(true)}
+      onMouseEnter={() => setTouched(true)}
+    >
       <span className="txn-row__date">{formatPostedOn(t.posted_on)}</span>
       <span className="txn-row__main">
         <span className="txn-row__merchant">{t.merchant}</span>
@@ -100,6 +165,7 @@ function Row({
       <span className="txn-row__account">{t.account_label}</span>
       <span className="txn-row__category">
         <CategorySelect t={t} categories={categories} disabled={disabled} recat={recat} />
+        <SuggestionChip t={t} enabled={suggestOn && (eager || touched)} recat={recat} />
       </span>
       <span
         className={`txn-row__amount amount ${credit ? "amount--credit" : "amount--debit"}${pending ? " amount--muted" : ""}`}
@@ -117,6 +183,7 @@ export function TransactionList() {
   const { filters, setFilters, clearFilters, hasFilters } = useUrlFilters();
   const categories = useCategories();
   const vendorDown = useVendorDown();
+  const suggestionsOn = useFlags().data?.["category-suggestions"] === true;
 
   const explicit = !!(filters.from || filters.to);
   const range = monthRange(filters.month);
@@ -189,13 +256,15 @@ export function TransactionList() {
           <span className="txn-head__amount">Amount</span>
         </div>
         <ul className="txn-list" aria-label="Transactions">
-          {rows.map((t) => (
+          {rows.map((t, i) => (
             <Row
               key={t.id}
               t={t}
               categories={categories.data ?? []}
               disabled={vendorDown}
               recat={recat}
+              suggestOn={suggestionsOn}
+              eager={i < 5}
             />
           ))}
         </ul>

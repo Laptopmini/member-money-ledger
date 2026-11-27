@@ -15,6 +15,7 @@ import type {
   Flags,
   MerchantRuleCreated,
   RulePreview,
+  Suggestion,
   Summary,
   SyncStatus,
   Transaction,
@@ -272,4 +273,15 @@ export function useRefresh() {
     },
   });
   return mutation;
+}
+
+export function useSuggestion(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["suggestion", id],
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    queryFn: ({ signal }) =>
+      apiFetch<Suggestion>(`/api/transactions/${encodeURIComponent(id)}/suggestion`, { signal }),
+  });
 }

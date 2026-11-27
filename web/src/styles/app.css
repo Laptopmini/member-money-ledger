@@ -858,3 +858,19 @@ input[type="radio"] {
   border-radius: var(--radius-1);
   margin-top: var(--space-2);
 }
+
+.suggestion {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.suggestion__chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px dashed var(--color-control-border);
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+}
