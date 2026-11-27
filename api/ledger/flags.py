@@ -37,7 +37,11 @@ def _evaluate(key: str, default: bool) -> bool:
     from openfeature.flag_evaluation import Reason
 
     if not _provider_ready:
-        api.set_provider(
+        # set_provider() returns before the gRPC stream is up, so the first evaluation in a fresh
+        # process (a management command, a new gunicorn worker) came back PROVIDER_NOT_READY and
+        # fell back to defaults. Wait for the provider; raises if flagd is unreachable.
+        api.clear_providers()  # drop a half-initialised provider from an earlier failed attempt
+        api.set_provider_and_wait(
             FlagdProvider(
                 host=os.environ.get("FLAGD_HOST", "flagd"),
                 port=int(os.environ.get("FLAGD_PORT", "8013")),
