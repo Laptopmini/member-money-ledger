@@ -178,8 +178,9 @@ From `docs/process/03-execution-log.md` (UTC; T0 = 18:16:53Z):
 | Detail drawer, account menu, flagd fix (owner's priorities) | 19:28 | 71 |
 | Fidelity pass, scroll-to-table, final gates | 19:35 | 79 |
 | Final owner round: chevron fix, more handback CSS, gates | 19:42 | 85 |
+| Handback adopted as the spec: overview, drawer, login, states; gates | 19:56 | 99 |
 
-The build ran from 18:16:53Z to 19:42Z, **85 minutes**, inside the 2-hour window (the plan targeted 90 minutes). Work kept
+The build ran from 18:16:53Z to 19:56Z, **99 minutes**, inside the 2-hour window (the plan targeted 90 minutes). Work kept
 going past the planned T+75 freeze because the owner asked for the handback, flagd and fidelity work
 after their test run. The owner's
 own time was in the Claude Design session and in answering 15 decision questions, in 4
