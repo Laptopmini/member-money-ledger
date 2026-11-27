@@ -33,7 +33,13 @@ from .serializers import (
     TransactionPatchSerializer,
     TransactionSerializer,
 )
-from .sync import last_sync_ok, maybe_sync_if_stale, sync_with_lock, validate_vendor_row
+from .sync import (
+    last_sync_ok,
+    maybe_sync_if_stale,
+    refresh_row,
+    sync_with_lock,
+    validate_vendor_row,
+)
 from .vendor import (
     TXN_ID_RE,
     InvalidTransactionId,
@@ -51,6 +57,9 @@ DATE_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}\Z")
 STALE_AFTER = timedelta(minutes=10)
 RUNNING_FRESH = timedelta(minutes=5)
 
+STALE_MESSAGE = "This transaction changed in your bank feed. Review and try again."
+DOWN_MESSAGE = "We couldn't reach your bank feed. Nothing was changed. Try again in a moment."
+
 ERRORS = {
     400: ErrorSerializer,
     404: ErrorSerializer,
@@ -61,7 +70,23 @@ ERRORS = {
 
 class LedgerView(APIView):
     """Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
-    so a global IsAuthenticated can be added in settings without touching views."""
+    so a global IsAuthenticated can be added in settings without touching views.
+
+    Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+    Mutating requests must be application/json: a cross-site form POST cannot send that
+    without a CORS preflight (CSRF mitigation until session auth lands)."""
+
+    auto_scope = True
+
+    def initial(self, request: Request, *args: Any, **kwargs: Any) -> None:
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            ctype = request.content_type.split(";")[0].strip().lower()
+            if ctype != "application/json":
+                raise ApiError(415, "unsupported_media_type", "Send JSON.")
+        if self.auto_scope and getattr(self, "throttle_scope", None) is None:
+            safe = request.method in ("GET", "HEAD", "OPTIONS")
+            self.throttle_scope = "reads" if safe else "writes"
+        super().initial(request, *args, **kwargs)
 
 
 def iso(dt: datetime | None) -> str | None:
@@ -183,73 +208,107 @@ class TransactionDetailView(LedgerView):
         responses={200: TransactionSerializer, **ERRORS},
     )
     def patch(self, request: Request, txn_id: str) -> Response:
-        txn = get_visible_txn(request, txn_id)
+        get_visible_txn(request, txn_id)  # id validation + 404
         ser = TransactionPatchSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         body = ser.validated_data
+        client = LedgerlyClient()
+        error: ApiError | None = None
+        result: Transaction | None = None
 
-        fields: dict[str, Any] = {}
-        if "category" in body:
-            category = body["category"]
+        # The row lock is taken BEFORE the stale check and held through the vendor PUT and the
+        # save, so concurrent PATCHes on one row serialize (and a sync's race guard sees our
+        # local_write_at). Errors that must leave side effects (tombstone, unconfirmed) are
+        # recorded in `error` and raised after the transaction commits.
+        with transaction.atomic():
+            txn = (
+                Transaction.objects.for_member(request.user)
+                .select_for_update()
+                .filter(pk=txn_id)
+                .first()
+            )
+            if txn is None:
+                raise ApiError(404, "not_found", "Transaction not found.")
+
+            expected = body.get("expected_updated_at")
+            if expected is not None and expected != txn.vendor_updated_at:
+                raise ApiError(409, "stale", STALE_MESSAGE)
+
+            wanted: dict[str, Any] = {}
+            if "category" in body:
+                wanted["category"] = body["category"]
+            if "description" in body:
+                wanted["description"] = body["description"]
+            fields = {k: v for k, v in wanted.items() if getattr(txn, k) != v}
+            if not fields:  # trap 28: never PUT a no-op (it would bump the vendor's updated_at)
+                return Response(TransactionSerializer(txn).data)
+            category = fields.get("category")
             if category is not None and not is_valid_category(category):
                 raise ApiError(400, "invalid_category", "Pick a category from the list.")
-            fields["category"] = category
-        if "description" in body:
-            fields["description"] = body["description"]
 
-        expected = body.get("expected_updated_at")
-        if expected is not None and expected != txn.vendor_updated_at:
-            raise ApiError(
-                409, "stale", "This transaction changed in your bank feed. Review and try again."
-            )
-
-        fields = {k: v for k, v in fields.items() if getattr(txn, k) != v}
-        if not fields:  # trap 28: never PUT a no-op (it would bump the vendor's updated_at)
-            return Response(TransactionSerializer(txn).data)
-
-        try:
-            vendor_row = LedgerlyClient().update(txn.pk, fields)
-        except VendorUnavailable:
-            raise ApiError(
-                502,
-                "vendor_unavailable",
-                "We couldn't reach your bank feed. Nothing was changed. Try again in a moment.",
-            ) from None
-        except VendorNotFound:
-            Transaction.objects.filter(pk=txn.pk).update(deleted_at=timezone.now())
-            DataVersion.bump()
-            raise ApiError(404, "not_found", "Transaction not found.") from None
-        except VendorRejected:
-            raise ApiError(
-                502, "vendor_rejected", "Your bank feed didn't accept that change. Nothing changed."
-            ) from None
-
-        clean = validate_vendor_row(vendor_row)
-        if isinstance(clean, str) or clean["id"] != txn.pk:
-            raise ApiError(
-                502, "vendor_rejected", "Your bank feed sent an unexpected reply. Nothing changed."
-            )
-
-        with transaction.atomic():
-            locked = Transaction.objects.select_for_update().get(pk=txn.pk)
-            before = {k: getattr(locked, k) for k in fields}
-            for f, value in clean.items():
-                setattr(locked, f, value)
-            locked.local_write_at = timezone.now()
-            locked.missing_since = None
-            locked.deleted_at = None
-            locked.save()
-            AuditEvent.objects.create(
-                actor="member",
-                action="recategorize" if "category" in fields else "describe",
-                txn_id=locked.pk,
-                before=before,
-                after={k: getattr(locked, k) for k in fields},
-                request_id=request_id_of(request),
-                ip=request.META.get("REMOTE_ADDR") or None,
-            )
-            DataVersion.bump()
-        return Response(TransactionSerializer(locked).data)
+            try:
+                # Freshness check against the vendor itself (reviewer 3c). Limitation (3b): the
+                # vendor's updated_at has one-second resolution, so two changes inside the same
+                # second are indistinguishable; last write wins there.
+                current = validate_vendor_row(client.get(txn.pk))
+                if isinstance(current, dict) and current["vendor_updated_at"] != (
+                    txn.vendor_updated_at
+                ):
+                    raise ApiError(409, "stale", STALE_MESSAGE)
+                vendor_row = client.update(txn.pk, fields)
+            except VendorUnavailable:
+                raise ApiError(502, "vendor_unavailable", DOWN_MESSAGE) from None
+            except VendorNotFound:
+                now = timezone.now()
+                Transaction.objects.filter(pk=txn.pk).update(deleted_at=now)
+                AuditEvent.objects.create(
+                    actor="member",
+                    action="tombstoned",
+                    txn_id=txn.pk,
+                    request_id=request_id_of(request),
+                    ip=request.META.get("REMOTE_ADDR") or None,
+                )
+                DataVersion.bump()
+                error = ApiError(404, "not_found", "Transaction not found.")
+            except VendorRejected:
+                raise ApiError(
+                    502,
+                    "vendor_rejected",
+                    "Your bank feed didn't accept that change. Nothing changed.",
+                ) from None
+            else:
+                clean = validate_vendor_row(vendor_row)
+                if isinstance(clean, str) or clean["id"] != txn.pk:
+                    # The PUT succeeded but we can't trust the reply: re-read and re-sync it.
+                    refresh_row(client, txn.pk)
+                    error = ApiError(
+                        502,
+                        "vendor_unconfirmed",
+                        "Your change may have been saved. Refresh to check.",
+                    )
+                else:
+                    before = {k: getattr(txn, k) for k in fields}
+                    for f, value in clean.items():
+                        setattr(txn, f, value)
+                    txn.local_write_at = timezone.now()
+                    txn.missing_since = None
+                    txn.deleted_at = None
+                    txn.save()
+                    AuditEvent.objects.create(
+                        actor="member",
+                        action="recategorize" if "category" in fields else "describe",
+                        txn_id=txn.pk,
+                        before=before,
+                        after={k: getattr(txn, k) for k in fields},
+                        request_id=request_id_of(request),
+                        ip=request.META.get("REMOTE_ADDR") or None,
+                    )
+                    DataVersion.bump()
+                    result = txn
+        if error is not None:
+            raise error
+        assert result is not None  # noqa: S101
+        return Response(TransactionSerializer(result).data)
 
 
 class TransactionHistoryView(LedgerView):
@@ -259,7 +318,14 @@ class TransactionHistoryView(LedgerView):
     )
     def get(self, request: Request, txn_id: str) -> Response:
         txn = get_visible_txn(request, txn_id)
-        events = AuditEvent.objects.filter(txn_id=txn.pk).order_by("-at", "-id")
+        events = AuditEvent.objects.filter(txn_id=txn.pk)
+        # Trap 15: history starts at the latest "replaced" event (the id was reused/revived).
+        replaced_id = (
+            events.filter(action="replaced").order_by("-id").values_list("id", flat=True).first()
+        )
+        if replaced_id is not None:
+            events = events.filter(id__gte=replaced_id)
+        events = events.order_by("-at", "-id")
         results = [
             {
                 "at": e.at,
@@ -285,9 +351,9 @@ class SummaryView(LedgerView):
             raise ApiError(400, "invalid_month", "month must look like 2026-10.")
         maybe_sync_if_stale()
 
-        etag = (
-            '"' + hashlib.sha256(f"{month}:{DataVersion.current()}".encode()).hexdigest()[:24] + '"'
-        )
+        last_ok = last_sync_ok()  # in the ETag so the body's synced_at is never frozen
+        tag = f"{month}:{DataVersion.current()}:{last_ok.pk if last_ok else 0}"
+        etag = '"' + hashlib.sha256(tag.encode()).hexdigest()[:24] + '"'
         if etag in [t.strip() for t in request.headers.get("If-None-Match", "").split(",")]:
             resp = HttpResponse(status=304)
         else:
@@ -310,7 +376,7 @@ class SummaryView(LedgerView):
             .annotate(total=Sum("amount_cents"), n=Count("id"))
         )
 
-        income = spend = pending = pending_n = 0
+        income = spend = pending = pending_n = pending_income = 0
         unc_credit = unc_credit_n = unc_n = excluded_n = 0
         per_cat: dict[str | None, list[int]] = defaultdict(lambda: [0, 0])
         for g in groups:
@@ -320,13 +386,18 @@ class SummaryView(LedgerView):
                 continue
             if cat is None:
                 unc_n += n
-            if g["status"] == "pending":
-                if g["direction"] == "debit":
-                    pending += total
-                    pending_n += n
-                continue
             kind = classify(cat, g["direction"], g["currency"])
             signed = signed_cents(total, g["direction"])
+            if g["status"] == "pending":
+                # Classify first; transfers don't count; refunds net against pending spend.
+                if kind == "transfer":
+                    continue
+                pending_n += n
+                if kind == "income":
+                    pending_income += signed
+                elif kind in ("spend", "refund"):
+                    pending -= signed
+                continue
             if kind == "income":
                 income += signed
             elif kind == "uncategorized_credit":
@@ -348,13 +419,14 @@ class SummaryView(LedgerView):
             for cat, v in ordered
         ]
 
-        latest = scoped.aggregate(m=Max("posted_on"))["m"]
+        latest = scoped.filter(status="posted", currency="USD").aggregate(m=Max("posted_on"))["m"]
         return {
             "month": month,
             "income_cents": income,
             "spend_cents": spend,
             "net_cents": income - spend,
             "pending_cents": pending,
+            "pending_income_cents": pending_income,
             "pending_count": pending_n,
             "uncategorized_count": unc_n,
             "uncategorized_credit_cents": unc_credit,
@@ -383,6 +455,8 @@ class CategoriesView(LedgerView):
 
 
 class SyncView(LedgerView):
+    throttle_scope = "sync"
+
     @extend_schema(
         operation_id="runSync",
         request=None,
@@ -437,6 +511,8 @@ class SyncStatusView(LedgerView):
 
 
 class HealthView(LedgerView):
+    auto_scope = False  # liveness probes are not throttled
+
     @extend_schema(
         operation_id="getHealth", responses={200: HealthSerializer, 503: HealthSerializer}
     )

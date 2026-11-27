@@ -89,6 +89,7 @@ class SummarySerializer(serializers.Serializer[Any]):
     spend_cents = serializers.IntegerField()
     net_cents = serializers.IntegerField()
     pending_cents = serializers.IntegerField()
+    pending_income_cents = serializers.IntegerField()
     pending_count = serializers.IntegerField()
     uncategorized_count = serializers.IntegerField()
     uncategorized_credit_cents = serializers.IntegerField()

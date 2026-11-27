@@ -10,6 +10,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - categories
       responses:
@@ -25,6 +29,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - health
       responses:
@@ -46,6 +54,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       parameters:
       - in: query
         name: month
@@ -76,6 +88,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - sync
       responses:
@@ -103,6 +119,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - sync
       responses:
@@ -118,6 +138,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       parameters:
       - in: query
         name: account
@@ -182,6 +206,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       parameters:
       - in: path
         name: txn_id
@@ -208,6 +236,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       parameters:
       - in: path
         name: txn_id
@@ -258,6 +290,10 @@ paths:
       description: |-
         Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
         so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
       parameters:
       - in: path
         name: txn_id
@@ -469,6 +505,8 @@ components:
           type: integer
         pending_cents:
           type: integer
+        pending_income_cents:
+          type: integer
         pending_count:
           type: integer
         uncategorized_count:
@@ -499,6 +537,7 @@ components:
       - net_cents
       - pending_cents
       - pending_count
+      - pending_income_cents
       - spend_cents
       - synced_at
       - uncategorized_count

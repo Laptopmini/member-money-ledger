@@ -79,6 +79,9 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "EXCEPTION_HANDLER": "ledger.errors.exception_handler",
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    # Per-IP until auth lands (locmem cache: per process; fine for one api container).
+    "DEFAULT_THROTTLE_RATES": {"reads": "300/min", "writes": "30/min", "sync": "6/min"},
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -102,16 +105,25 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000"))
     SECURE_SSL_REDIRECT = _flag("DJANGO_SSL_REDIRECT", "0")
-    SESSION_COOKIE_SECURE = _flag("DJANGO_SECURE_COOKIES", "0")
+    SESSION_COOKIE_SECURE = _flag("DJANGO_SECURE_COOKIES", "1")
     CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
 
-# Never log merchant/description text: only ids, codes, counts.
+# Never log merchant/description text: only ids, codes, counts. Query strings can carry
+# search terms (`q=`), so access logs are redacted too (rule 17).
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "filters": {"redact_query": {"()": "ledger.logging.RedactQueryFilter"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "filters": ["redact_query"]}},
+    "loggers": {
+        "django.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "gunicorn.access": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
     "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
 }
