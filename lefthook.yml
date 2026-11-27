@@ -16,7 +16,7 @@ pre-commit:
       run: |
         if [ -z "$(docker compose ps -q --status running web)" ]; then echo "skip biome: web container not running"; exit 0; fi
         files=$(echo {staged_files} | tr ' ' '\n' | sed 's#^web/##' | tr '\n' ' ')
-        docker compose exec -T web npx biome check $files
+        docker compose exec -T web npx biome check --no-errors-on-unmatched $files
     tsc-web:
       glob: "web/**/*.{ts,tsx}"
       run: |
