@@ -52,6 +52,7 @@ class LoginView(LedgerView):
     permission_classes = [AllowAny]
     throttle_classes = [LoginIPThrottle, LoginUserThrottle]
     auto_scope = False
+    throttle_message = "Too many attempts. Try again in a minute."
 
     @extend_schema(
         operation_id="login",
@@ -68,6 +69,7 @@ class LoginView(LedgerView):
             password=ser.validated_data["password"],
         )
         if user is None:
+            LoginUserThrottle().record_failure(request, self)
             raise ApiError(400, "invalid_credentials", "That email and password don't match.")
         login(request._request, user)  # rotates the session key
         request._request.session["last_activity"] = int(time.time())

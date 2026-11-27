@@ -52,6 +52,16 @@ class IdleTimeoutMiddleware:
                     "session_expired",
                     "You were signed out after 15 minutes of inactivity.",
                 )
-            if request.headers.get("X-User-Activity") == "1" and path not in NO_REFRESH_PATHS:
-                request.session["last_activity"] = now
-        return self.get_response(request)
+        response = self.get_response(request)
+        refresh = (
+            user is not None
+            and user.is_authenticated
+            and path not in OPEN_PATHS
+            and path not in NO_REFRESH_PATHS
+            and request.headers.get("X-User-Activity") == "1"
+            and response.status_code < 400  # a failed request is not activity
+            and "_auth_user_id" in request.session  # not after a logout flushed the session
+        )
+        if refresh:
+            request.session["last_activity"] = int(time.time())
+        return response

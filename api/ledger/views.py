@@ -81,7 +81,7 @@ class LedgerView(APIView):
 
     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
     Mutating requests must be application/json: a cross-site form POST cannot send that
-    without a CORS preflight (CSRF mitigation until session auth lands)."""
+    without a CORS preflight (defence in depth next to the CSRF token)."""
 
     auto_scope = True
 

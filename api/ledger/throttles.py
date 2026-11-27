@@ -30,12 +30,41 @@ class LoginIPThrottle(SimpleRateThrottle):
 
 
 class LoginUserThrottle(SimpleRateThrottle):
-    """20/hour per posted email, so one account can't be ground down from many IPs."""
+    """20/hour per (posted email, IP), counting FAILED logins only: a correct password is never
+    blocked by earlier failures from elsewhere, and failures can't lock an account for everyone."""
 
     scope = "login_user"
+    duration: int
+    num_requests: int
 
     def get_cache_key(self, request: Request, view: Any) -> str | None:
         data = request.data
         email = data.get("email", "") if isinstance(data, dict) else ""
-        digest = hashlib.sha256(str(email).strip().lower().encode()).hexdigest()[:32]
-        return self.cache_format % {"scope": self.scope, "ident": digest}
+        raw = f"{str(email).strip().lower()}|{self.get_ident(request)}"
+        return self.cache_format % {
+            "scope": self.scope,
+            "ident": hashlib.sha256(raw.encode()).hexdigest()[:32],
+        }
+
+    def allow_request(self, request: Request, view: Any) -> bool:
+        if self.rate is None:
+            return True
+        self.key = self.get_cache_key(request, view)
+        if self.key is None:
+            return True
+        self.history = self.cache.get(self.key, [])
+        self.now = self.timer()
+        while self.history and self.history[-1] <= self.now - self.duration:
+            self.history.pop()
+        return len(self.history) < self.num_requests or self.throttle_failure()
+
+    def record_failure(self, request: Request, view: Any) -> None:
+        if self.rate is None:
+            return
+        key = self.get_cache_key(request, view)
+        if key is None:
+            return
+        now = self.timer()
+        history = [t for t in self.cache.get(key, []) if t > now - self.duration]
+        history.insert(0, now)
+        self.cache.set(key, history, self.duration)

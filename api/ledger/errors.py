@@ -1,6 +1,7 @@
 """One error envelope for every failure: {"error": {"code", "message", "request_id"}}."""
 
 import logging
+import math
 from typing import Any
 
 from django.http import Http404, HttpRequest, JsonResponse
@@ -40,6 +41,16 @@ _DEFAULTS: dict[int, tuple[str, str]] = {
 }
 
 
+def throttle_message(wait: float | None) -> str:
+    if wait is None:
+        return "Too many attempts. Try again shortly."
+    seconds = math.ceil(wait)
+    if seconds > 90:
+        minutes = math.ceil(seconds / 60)
+        return f"Too many attempts. Try again in {minutes} minutes."
+    return f"Too many attempts. Try again in {seconds} seconds."
+
+
 def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
     request = context.get("request")
     rid = request_id_of(request)
@@ -58,6 +69,10 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
         code, message = "csrf_failed", "Your session check failed. Reload the page and try again."
     if isinstance(exc, exceptions.ParseError):
         code = "bad_request"
+    if isinstance(exc, exceptions.Throttled):
+        message = getattr(context.get("view"), "throttle_message", None) or throttle_message(
+            getattr(exc, "wait", None)
+        )
     response.data = envelope(code, message, rid)
     return response
 

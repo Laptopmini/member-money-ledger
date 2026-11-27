@@ -82,13 +82,20 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",  # created by migration ledger.0005
+    }
+}
+
 USE_TZ = True
 TIME_ZONE = "UTC"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 APPEND_SLASH = False
 
 REST_FRAMEWORK = {
-    # Auth lands in a later stage: add the classes / a global IsAuthenticated here.
+    # Session auth; the permission reads the `auth-required` flag on every request.
     "DEFAULT_AUTHENTICATION_CLASSES": ["ledger.permissions.SessionAuth401"],
     "DEFAULT_PERMISSION_CLASSES": ["ledger.permissions.AuthIfFlagOn"],
     "NUM_PROXIES": 1 if TRUST_PROXY else 0,
@@ -96,7 +103,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "EXCEPTION_HANDLER": "ledger.errors.exception_handler",
     "DEFAULT_THROTTLE_CLASSES": ["ledger.throttles.ScopedUserThrottle"],
-    # Per-IP until auth lands (locmem cache: per process; fine for one api container).
+    # Keyed by user id when signed in, else client IP. Shared DB cache (all workers).
     "DEFAULT_THROTTLE_RATES": {
         "reads": "300/min",
         "writes": "30/min",
