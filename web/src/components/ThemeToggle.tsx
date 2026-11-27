@@ -1,28 +1,25 @@
 import { type Theme, useTheme } from "../lib/theme";
 
-const OPTIONS: { value: Theme; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
-];
+const ORDER: Theme[] = ["system", "light", "dark"];
+const LABEL: Record<Theme, string> = { system: "System", light: "Light", dark: "Dark" };
+const ICON: Record<Theme, string> = { system: "◐", light: "☀", dark: "☾" };
 
+/** One compact button that cycles system, light, dark. */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
   return (
-    <fieldset className="segmented">
-      <legend className="visually-hidden">Theme</legend>
-      {OPTIONS.map((o) => (
-        <label key={o.value} className="segmented__item">
-          <input
-            type="radio"
-            name="theme"
-            value={o.value}
-            checked={theme === o.value}
-            onChange={() => setTheme(o.value)}
-          />
-          <span>{o.label}</span>
-        </label>
-      ))}
-    </fieldset>
+    <button
+      type="button"
+      className="btn btn--ghost btn--small theme-toggle"
+      aria-label={`Theme: ${LABEL[theme]}. Switch to ${LABEL[next]}.`}
+      title={`Theme: ${LABEL[theme]}`}
+      onClick={() => setTheme(next)}
+    >
+      <span aria-hidden="true">{ICON[theme]}</span>
+      <span className="theme-toggle__text" aria-hidden="true">
+        {LABEL[theme]}
+      </span>
+    </button>
   );
 }

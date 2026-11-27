@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCategories } from "../api/queries";
 import { useUrlFilters } from "../lib/useUrlFilters";
 
@@ -15,6 +15,28 @@ export function Filters({ count, hasMore }: { count: number | null; hasMore: boo
     return () => clearTimeout(t);
   }, [q, filters.q, setFilters]);
 
+  const [open, setOpen] = useState(false);
+  const multiRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
+    };
+    const onDown = (e: PointerEvent) => {
+      if (!multiRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
+
   const toggle = (key: string) =>
     setFilters({
       category: filters.category.includes(key)
@@ -25,6 +47,15 @@ export function Filters({ count, hasMore }: { count: number | null; hasMore: boo
   const options = [{ key: "uncategorized", label: "Uncategorized" }, ...(categories.data ?? [])];
   const known = new Set(options.map((o) => o.key));
   for (const c of filters.category) if (!known.has(c)) options.push({ key: c, label: c });
+
+  const labelOf = (k: string) => options.find((o) => o.key === k)?.label ?? k;
+  const n = filters.category.length;
+  const summary =
+    n === 0
+      ? "Category: All"
+      : n === 1
+        ? `Category: ${labelOf(filters.category[0])}`
+        : `Category: ${n} selected`;
 
   return (
     <search aria-label="Filter transactions">
@@ -40,24 +71,37 @@ export function Filters({ count, hasMore }: { count: number | null; hasMore: boo
           />
         </div>
 
-        <details className="field multi">
-          <summary>
-            Category{filters.category.length > 0 ? ` (${filters.category.length})` : ""}
-          </summary>
-          <fieldset className="multi__list">
-            <legend className="visually-hidden">Categories</legend>
-            {options.map((o) => (
-              <label key={o.key} className="multi__item">
-                <input
-                  type="checkbox"
-                  checked={filters.category.includes(o.key)}
-                  onChange={() => toggle(o.key)}
-                />
-                {o.label}
-              </label>
-            ))}
-          </fieldset>
-        </details>
+        <div className="field multi" ref={multiRef}>
+          <span id="f-cat-label">Category</span>
+          <button
+            type="button"
+            id="f-cat"
+            ref={btnRef}
+            className="multi__button"
+            aria-expanded={open}
+            aria-controls="f-cat-list"
+            aria-labelledby="f-cat-label f-cat"
+            onClick={() => setOpen((o) => !o)}
+          >
+            <span>{summary}</span>
+            <span aria-hidden="true">{open ? "▴" : "▾"}</span>
+          </button>
+          {open && (
+            <fieldset id="f-cat-list" className="multi__list">
+              <legend className="visually-hidden">Categories</legend>
+              {options.map((o) => (
+                <label key={o.key} className="multi__item">
+                  <input
+                    type="checkbox"
+                    checked={filters.category.includes(o.key)}
+                    onChange={() => toggle(o.key)}
+                  />
+                  {o.label}
+                </label>
+              ))}
+            </fieldset>
+          )}
+        </div>
 
         <div className="field">
           <label htmlFor="f-from">From</label>

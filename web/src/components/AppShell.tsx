@@ -12,9 +12,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="app-header">
         <div className="app-header__inner">
           <h1 className="app-header__title">Ledger</h1>
-          <MonthPicker />
-          <SyncStatus />
           <ThemeToggle />
+          <div className="app-header__row">
+            <MonthPicker />
+            <SyncStatus />
+          </div>
         </div>
       </header>
       <Banners />

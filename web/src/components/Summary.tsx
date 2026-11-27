@@ -18,7 +18,9 @@ function Bars({ rows }: { rows: CategoryBreakdown[] }) {
         const neg = r.spend_cents < 0;
         const width = (Math.abs(r.spend_cents) / maxAbs) * (hasNegative ? 50 : 100);
         const share =
-          positiveTotal > 0 && !neg ? Math.round((r.spend_cents / positiveTotal) * 100) : null;
+          positiveTotal > 0 && r.spend_cents > 0
+            ? Math.round((r.spend_cents / positiveTotal) * 100)
+            : null;
         return (
           <li key={key} className="bars__row">
             <span className="bars__label">{r.label}</span>
@@ -39,6 +41,9 @@ function Bars({ rows }: { rows: CategoryBreakdown[] }) {
             <span className="bars__amount">
               {formatCents(r.spend_cents)}
               {neg && <span className="bars__note"> net refund</span>}
+              {r.spend_cents === 0 && r.category !== null && (
+                <span className="bars__note"> · refunded</span>
+              )}
               {share !== null && <span className="bars__share"> · {share}%</span>}
             </span>
           </li>
