@@ -16,6 +16,7 @@ from typing import Any
 
 from django.conf import settings
 from django.db import connection, transaction
+from django.db.models import F, Q
 from django.utils import timezone
 
 from .models import AuditEvent, DataVersion, SyncRejection, SyncRun, Transaction
@@ -32,6 +33,7 @@ MAX_PAGES = 10_000
 ADVISORY_LOCK_KEY = 7_345_001
 CURRENCY_RE = re.compile(r"\A[A-Z]{3}\Z")
 DATE_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}\Z")
+IDENTITY = ("merchant", "account_id")
 AUDITED_FIELDS = ("category", "status", "amount_cents", "posted_on")
 COMPARED_FIELDS = (
     "account_id",
@@ -57,6 +59,33 @@ def parse_vendor_datetime(value: object) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
+MAX_LEN = {"account_id": 64, "merchant": 255, "category": 64, "description": 10_000}
+MAX_BIGINT = 2**63
+
+
+def strip_nul(value: Any) -> Any:
+    """Postgres text/jsonb cannot hold NUL: strip it from anything we store as a payload."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, dict):
+        return {strip_nul(k): strip_nul(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [strip_nul(v) for v in value]
+    return value
+
+
+def _string_problem(raw: dict[str, Any]) -> str | None:
+    for field in ("id", "account_id", "merchant", "category", "description", "currency"):
+        value = raw.get(field)
+        if not isinstance(value, str):
+            continue
+        if "\x00" in value:
+            return f"nul_in_{field}"
+        if field in MAX_LEN and len(value) > MAX_LEN[field]:
+            return f"{field}_too_long"
+    return None
+
+
 def validate_vendor_row(raw: object) -> dict[str, Any] | str:
     """Return the cleaned row, or a short rejection reason (never echoes values)."""
     if not isinstance(raw, dict):
@@ -66,6 +95,9 @@ def validate_vendor_row(raw: object) -> dict[str, Any] | str:
         return "bad_id"
     if not isinstance(raw.get("account_id"), str) or not raw["account_id"]:
         return "bad_account_id"
+    problem = _string_problem(raw)
+    if problem:
+        return problem
     posted = raw.get("posted_on")
     if not isinstance(posted, str) or not DATE_RE.match(posted):
         return "bad_posted_on"
@@ -74,7 +106,7 @@ def validate_vendor_row(raw: object) -> dict[str, Any] | str:
     except ValueError:
         return "bad_posted_on"
     amount = raw.get("amount_cents")
-    if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
+    if isinstance(amount, bool) or not isinstance(amount, int) or not 0 <= amount < MAX_BIGINT:
         return "bad_amount_cents"
     if raw.get("direction") not in ("debit", "credit"):
         return "bad_direction"
@@ -140,51 +172,69 @@ def _fetch_pass(client: LedgerlyClient) -> tuple[list[Any], bool]:
     return rows, False
 
 
-def _fetch_all(client: LedgerlyClient, max_passes: int = 3) -> list[Any]:
+def _fetch_all(client: LedgerlyClient, max_passes: int = 3) -> tuple[list[Any], bool]:
     """Offset cursors drift when the vendor changes mid-listing: that shows up as a duplicate
     id (and can hide a row). Re-list when a duplicate is seen; upsert-by-id keeps any leftover
     duplicates harmless."""
     rows: list[Any] = []
+    clean_end = False
     for _ in range(max_passes):
         rows, clean_end = _fetch_pass(client)
         ids = [r.get("id") for r in rows if isinstance(r, dict)]
         if not clean_end or len(ids) == len(set(ids)):
             break
-    return rows
+    return rows, clean_end
 
 
 def apply_row(
     clean: dict[str, Any],
     existing: Transaction | None,
-    run: SyncRun,
+    run: SyncRun | None,
     now: datetime,
 ) -> str:
-    """Upsert one validated row. Returns 'created' | 'updated' | 'unchanged' | 'skipped'."""
+    """Upsert one validated row. Returns 'created' | 'updated' | 'unchanged' | 'skipped'.
+
+    `existing` must be row-locked by the caller (select_for_update) so the race guard reads
+    a current local_write_at. With run=None (single-row refresh) the guard is not applied.
+    """
+    run_pk = run.pk if run else None
     if existing is None:
-        Transaction.objects.create(**clean, last_seen_sync_id=run.pk)
+        Transaction.objects.create(**clean, last_seen_sync_id=run_pk)
         return "created"
-    if existing.local_write_at is not None and existing.local_write_at >= run.started_at:
+    if (
+        run is not None
+        and existing.local_write_at is not None
+        and existing.local_write_at >= run.started_at
+    ):
         return "skipped"  # we PUT this row after the run started: our write is newer
     changed = {f: getattr(existing, f) for f in COMPARED_FIELDS if getattr(existing, f) != clean[f]}
     revived = existing.deleted_at is not None
-    flags = existing.missing_since is not None or revived or existing.last_seen_sync_id != run.pk
     if not changed and not revived:
-        if flags:
+        if existing.missing_since is not None or (run and existing.last_seen_sync_id != run_pk):
             Transaction.objects.filter(pk=existing.pk).update(
-                missing_since=None, last_seen_sync_id=run.pk
+                missing_since=None, last_seen_sync_id=run_pk
             )
         return "unchanged"
-    audited = {f: old for f, old in changed.items() if f in AUDITED_FIELDS}
-    for f in COMPARED_FIELDS:
-        setattr(existing, f, clean[f])
-    existing.missing_since = None
-    existing.deleted_at = None
-    existing.last_seen_sync_id = run.pk
-    existing.save()
-    if audited:
+    # Trap 15: a reused id (vendor restart) or a revived tombstone is a different row.
+    replaced = revived or any(f in changed for f in ("merchant", "account_id"))
+    audited = {
+        f: old for f, old in changed.items() if f in AUDITED_FIELDS or (replaced and f in IDENTITY)
+    }
+    values = {f: clean[f] for f in COMPARED_FIELDS}
+    values.update(missing_since=None, deleted_at=None, last_seen_sync_id=run_pk, modified=now)
+    guarded = Transaction.objects.filter(pk=existing.pk)
+    if run is not None:
+        # Conditional write: re-checks the race guard in SQL, so a PUT that committed after
+        # we loaded the row still wins.
+        guarded = guarded.filter(
+            Q(local_write_at__isnull=True) | Q(local_write_at__lt=run.started_at)
+        )
+    if guarded.update(**values) == 0:
+        return "skipped"
+    if audited or replaced:
         AuditEvent.objects.create(
             actor="sync",
-            action="synced",
+            action="replaced" if replaced else "synced",
             txn_id=existing.pk,
             before={k: _jsonable(v) for k, v in audited.items()},
             after={k: _jsonable(clean[k]) for k in audited},
@@ -217,8 +267,11 @@ def _finish(run: SyncRun, status: str, error_code: str = "") -> None:
     run.save()
 
 
+MAX_CONFIRMS = 50
+
+
 def _run(client: LedgerlyClient, run: SyncRun) -> None:
-    raw_rows = _fetch_all(client)  # network first: a failure leaves our data untouched
+    raw_rows, clean_end = _fetch_all(client)  # network first: a failure leaves data untouched
     run.fetched = len(raw_rows)
 
     valid: dict[str, dict[str, Any]] = {}
@@ -230,39 +283,61 @@ def _run(client: LedgerlyClient, run: SyncRun) -> None:
         else:
             valid[result["id"]] = result  # dedupe by id: last one wins
 
-    seen_ids = set(valid) | {k for k in rejected}
-    candidates = list(
-        Transaction.objects.visible().exclude(pk__in=seen_ids).values_list("pk", flat=True)
-    )
+    # Tombstone pass only after a clean listing (null cursor): a truncated listing proves
+    # nothing. At most MAX_CONFIRMS GETs per run; an unreachable vendor means "unknown: keep".
     confirmed_gone: list[str] = []
+    unknown: list[str] = []
     still_there: dict[str, dict[str, Any]] = {}
-    for txn_id in candidates:
-        try:
-            result = validate_vendor_row(client.get(txn_id))
-        except VendorNotFound:
-            confirmed_gone.append(txn_id)
-            continue
-        if isinstance(result, dict) and result["id"] == txn_id:
-            still_there[txn_id] = result  # skipped by offset drift: it still exists
-        # a malformed-but-existing row keeps its last good copy
+    if clean_end:
+        seen_ids = set(valid) | set(rejected)
+        candidates = list(
+            Transaction.objects.visible()
+            .exclude(pk__in=seen_ids)
+            .order_by(F("missing_since").asc(nulls_first=True), "pk")
+            .values_list("pk", flat=True)[:MAX_CONFIRMS]
+        )
+        for txn_id in candidates:
+            try:
+                result = validate_vendor_row(client.get(txn_id))
+            except VendorNotFound:
+                confirmed_gone.append(txn_id)
+                continue
+            except VendorError:
+                unknown.append(txn_id)
+                continue
+            if isinstance(result, dict) and result["id"] == txn_id:
+                still_there[txn_id] = result  # skipped by offset drift: it still exists
+            # a malformed-but-existing row keeps its last good copy
 
     now = timezone.now()
     counts = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0}
     with transaction.atomic():
-        existing = Transaction.objects.in_bulk(list(valid) + list(still_there))
-        for txn_id, clean in {**valid, **still_there}.items():
+        wanted = {**valid, **still_there}
+        # Row locks: a concurrent PATCH holds the row lock through its vendor PUT and save,
+        # so the race guard below always sees its local_write_at.
+        existing = {
+            t.pk: t for t in Transaction.objects.select_for_update().filter(pk__in=list(wanted))
+        }
+        for txn_id, clean in wanted.items():
             outcome = apply_row(clean, existing.get(txn_id), run, now)
             counts[outcome] += 1
-        gone = Transaction.objects.filter(pk__in=confirmed_gone, deleted_at__isnull=True)
-        tombstoned = gone.update(deleted_at=now, missing_since=now)
+        gone_qs = Transaction.objects.filter(pk__in=confirmed_gone, deleted_at__isnull=True)
+        gone_ids = list(gone_qs.values_list("pk", flat=True))
+        tombstoned = gone_qs.update(deleted_at=now, missing_since=now)
+        for gid in gone_ids:
+            AuditEvent.objects.create(actor="sync", action="tombstoned", txn_id=gid, at=now)
+        Transaction.objects.filter(pk__in=unknown, missing_since__isnull=True).update(
+            missing_since=now
+        )
 
         SyncRejection.objects.filter(txn_id__in=list(valid)).delete()
         for key, (reason, raw) in rejected.items():
+            payload = strip_nul(raw) if isinstance(raw, dict) else {}
             row, created = SyncRejection.objects.get_or_create(
-                txn_id=key, defaults={"reason": reason, "payload": raw if raw is not None else {}}
+                txn_id=key, defaults={"reason": reason, "payload": payload}
             )
             if not created:
-                row.reason, row.payload, row.last_seen_at = reason, raw, now
+                row.reason, row.payload, row.last_seen_at = reason, payload, now
                 row.save()
 
         run.upserted = counts["created"] + counts["updated"]
@@ -272,6 +347,22 @@ def _run(client: LedgerlyClient, run: SyncRun) -> None:
         if run.upserted or tombstoned:
             DataVersion.bump()
         _finish(run, "ok")
+
+
+def refresh_row(client: LedgerlyClient, txn_id: str) -> bool:
+    """Best effort: GET one row and apply it (vendor wins). Caller should hold the row lock."""
+    try:
+        clean = validate_vendor_row(client.get(txn_id))
+    except VendorError:
+        return False
+    if isinstance(clean, str) or clean["id"] != txn_id:
+        return False
+    with transaction.atomic():
+        existing = Transaction.objects.select_for_update().filter(pk=txn_id).first()
+        outcome = apply_row(clean, existing, None, timezone.now())
+        if outcome in ("created", "updated"):
+            DataVersion.bump()
+    return True
 
 
 def _try_lock(cur: Any) -> bool:
@@ -316,6 +407,6 @@ def maybe_sync_if_stale() -> None:
     if last_attempt and last_attempt.started_at > cutoff:
         return  # recent failed/running attempt: don't hammer a down vendor on every request
     try:
-        sync_with_lock()
+        sync_with_lock(LedgerlyClient(timeout=2, retries=0))
     except Exception as exc:  # noqa: BLE001 - reads must survive any sync failure
         log.warning("maybe_sync_failed type=%s", type(exc).__name__)
