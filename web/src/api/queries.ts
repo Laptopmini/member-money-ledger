@@ -1,11 +1,12 @@
 import {
   type InfiniteData,
+  type QueryClient,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "../components/Toasts";
 import { addMonths } from "../lib/dates";
 import { type ApiError, apiFetch, buildQuery } from "./client";
@@ -74,20 +75,66 @@ export function useSyncStatus() {
 }
 
 type Vars = { id: string; category: string; expected_updated_at: string };
-type Snapshot = [readonly unknown[], InfiniteData<TransactionList> | undefined][];
+type RowFields = Pick<
+  Transaction,
+  "category" | "category_label" | "category_known" | "kind" | "updated_at"
+>;
 
-function kindFor(row: Transaction, category: string): Transaction["kind"] {
-  if (row.kind === "excluded_currency") return row.kind;
-  if (category === "transfer") return "transfer";
-  if (row.direction === "debit") return "spend";
-  return category === "income" ? "income" : "refund";
+/** Patch one row, by id, in every cached transactions page (all filters, all pages). */
+function patchRow(qc: QueryClient, id: string, fields: Partial<RowFields>) {
+  qc.setQueriesData<InfiniteData<TransactionList>>(
+    { queryKey: ["transactions"] },
+    (data) =>
+      data && {
+        ...data,
+        pages: data.pages.map((p) => ({
+          ...p,
+          results: p.results.map((r) => (r.id === id ? { ...r, ...fields } : r)),
+        })),
+      },
+  );
 }
 
-export function useRecategorize() {
+function findRow(qc: QueryClient, id: string): Transaction | undefined {
+  for (const [, data] of qc.getQueriesData<InfiniteData<TransactionList>>({
+    queryKey: ["transactions"],
+  })) {
+    for (const page of data?.pages ?? []) {
+      const row = page.results.find((r) => r.id === id);
+      if (row) return row;
+    }
+  }
+  return undefined;
+}
+
+const pick = (r: Transaction): RowFields => ({
+  category: r.category,
+  category_label: r.category_label,
+  category_known: r.category_known,
+  kind: r.kind,
+  updated_at: r.updated_at,
+});
+
+/**
+ * One mutation for the whole list. Each call keeps its own context, so concurrent edits on
+ * different rows roll back independently (only that row's fields), and a row's select is
+ * disabled while its own request is in flight (`pendingIds`).
+ */
+export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } = {}) {
   const qc = useQueryClient();
   const toast = useToast();
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const onSaved = useRef(opts.onSaved);
+  onSaved.current = opts.onSaved;
+  const setPending = (id: string, on: boolean) =>
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
-  const mutation = useMutation<Transaction, ApiError, Vars, { snapshot: Snapshot }>({
+  const mutation = useMutation<Transaction, ApiError, Vars, { before?: RowFields }>({
     mutationFn: ({ id, category, expected_updated_at }) =>
       apiFetch<Transaction>(`/api/transactions/${encodeURIComponent(id)}`, {
         method: "PATCH",
@@ -95,43 +142,33 @@ export function useRecategorize() {
         userActivity: true,
       }),
     onMutate: async ({ id, category }) => {
+      setPending(id, true);
       await qc.cancelQueries({ queryKey: ["transactions"] });
-      const snapshot = qc.getQueriesData<InfiniteData<TransactionList>>({
-        queryKey: ["transactions"],
-      }) as Snapshot;
+      const row = findRow(qc, id);
       const label = qc
         .getQueryData<Category[]>(["categories"])
         ?.find((c) => c.key === category)?.label;
-      qc.setQueriesData<InfiniteData<TransactionList>>(
-        { queryKey: ["transactions"] },
-        (data) =>
-          data && {
-            ...data,
-            pages: data.pages.map((p) => ({
-              ...p,
-              results: p.results.map((r) =>
-                r.id === id
-                  ? {
-                      ...r,
-                      category,
-                      category_label: label ?? category,
-                      category_known: true,
-                      kind: kindFor(r, category),
-                    }
-                  : r,
-              ),
-            })),
-          },
+      // kind stays as it was until the server row arrives; we don't guess it.
+      patchRow(qc, id, { category, category_label: label ?? category, category_known: true });
+      return { before: row && pick(row) };
+    },
+    onSuccess: (server) => {
+      // The response may carry only some fields; never overwrite with undefined.
+      const fields = Object.fromEntries(
+        Object.entries(pick(server)).filter(([, v]) => v !== undefined),
       );
-      return { snapshot };
+      patchRow(qc, server.id, fields);
+      toast({ kind: "success", message: "Saved to Ledgerly" });
+      onSaved.current?.(server);
     },
     onError: (err, vars, ctx) => {
+      if (err.code === "vendor_unavailable") qc.invalidateQueries({ queryKey: ["sync-status"] });
       if (err.code === "vendor_unconfirmed") {
         // The change may have been saved: keep the optimistic row and let the refetch decide.
         toast({ kind: "error", message: err.message });
         return;
       }
-      for (const [key, data] of ctx?.snapshot ?? []) qc.setQueryData(key, data);
+      if (ctx?.before) patchRow(qc, vars.id, ctx.before);
       if (err.status === 409) {
         toast({
           kind: "error",
@@ -145,26 +182,32 @@ export function useRecategorize() {
         });
       }
     },
-    onSuccess: () => toast({ kind: "success", message: "Saved to Ledgerly" }),
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
+      setPending(vars.id, false);
       for (const k of ["transactions", "summary", "set-aside"]) {
         qc.invalidateQueries({ queryKey: [k] });
       }
     },
   });
-  return mutation;
+  return { recategorize: mutation.mutate, pendingIds };
 }
 
 export function useRefresh() {
   const qc = useQueryClient();
   const toast = useToast();
-  return useMutation<unknown, ApiError>({
+  const mutation = useMutation<unknown, ApiError>({
     mutationFn: () => apiFetch("/api/sync", { method: "POST", userActivity: true }),
-    onError: (err) => toast({ kind: "error", message: err.message }),
+    onError: (err) =>
+      toast({
+        kind: "error",
+        message: err.message,
+        action: { label: "Retry", run: () => mutation.mutate() },
+      }),
     onSettled: () => {
       for (const k of ["sync-status", "transactions", "summary", "set-aside"]) {
         qc.invalidateQueries({ queryKey: [k] });
       }
     },
   });
+  return mutation;
 }

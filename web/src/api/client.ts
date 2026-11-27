@@ -96,13 +96,14 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
     throw new ApiError(0, "network", "We couldn't reach the server. Check your connection.");
   }
 
-  let data: unknown;
   const text = await res.text();
+  let data: unknown;
+  let parsed = true;
   if (text) {
     try {
       data = JSON.parse(text);
     } catch {
-      data = undefined;
+      parsed = false;
     }
   }
 
@@ -113,6 +114,15 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
       env?.code ?? "unknown",
       env?.message ?? "Something went wrong. Try again in a moment.",
       env?.request_id,
+    );
+  }
+  if (res.status === 204 || text === "") return null as T;
+  const isJson = (res.headers.get("content-type") ?? "").includes("json");
+  if (!parsed || !isJson) {
+    throw new ApiError(
+      res.status,
+      "bad_response",
+      "We got an unexpected reply. Try again in a moment.",
     );
   }
   return data as T;

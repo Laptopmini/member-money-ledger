@@ -14,6 +14,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["listCategories"];
         put?: never;
@@ -34,6 +38,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["getHealth"];
         put?: never;
@@ -54,6 +62,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["getSummary"];
         put?: never;
@@ -76,6 +88,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         post: operations["runSync"];
         delete?: never;
@@ -94,6 +110,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["getSyncStatus"];
         put?: never;
@@ -114,6 +134,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["listTransactions"];
         put?: never;
@@ -134,6 +158,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["getTransaction"];
         put?: never;
@@ -144,6 +172,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         patch: operations["updateTransaction"];
         trace?: never;
@@ -158,6 +190,10 @@ export interface paths {
         /**
          * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
          *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (CSRF mitigation until session auth lands).
          */
         get: operations["getTransactionHistory"];
         put?: never;
@@ -261,6 +297,7 @@ export interface components {
             spend_cents: number;
             net_cents: number;
             pending_cents: number;
+            pending_income_cents: number;
             pending_count: number;
             uncategorized_count: number;
             uncategorized_credit_cents: number;
