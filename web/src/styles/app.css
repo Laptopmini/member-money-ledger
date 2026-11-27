@@ -81,3 +81,10 @@
 .card__header > .txns__header {
   flex: 1;
 }
+fieldset.cat-options__group,
+fieldset.cat-options {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}

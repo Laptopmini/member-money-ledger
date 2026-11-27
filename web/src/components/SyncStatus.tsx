@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRefresh, useSyncStatus } from "../api/queries";
 import { formatRelative } from "../lib/dates";
-import { Refresh } from "./icons";
+import { Alert, Refresh } from "./icons";
 
 export function SyncStatus() {
   const { data } = useSyncStatus();
@@ -31,7 +31,7 @@ export function SyncStatus() {
         className={`sync-status${down ? " sync-status--down" : ""}${stale ? " sync-status--stale" : ""}${never ? " sync-status--never" : ""}`}
         role="status"
       >
-        <span className="sync-status__dot" aria-hidden="true" />
+        {down ? <Alert /> : <span className="sync-status__dot" aria-hidden="true" />}
         <span>
           {!running && !down && !never && !!data?.last_success_at && (
             <span className="sync-status__word">Synced </span>

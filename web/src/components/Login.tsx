@@ -6,12 +6,17 @@ export function Login({ expired }: { expired: boolean }) {
   const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
 
   return (
     <main className="login">
       <div className="login__brand">
         <span className="app-header__brand-mark" aria-hidden="true">
-          L
+          <svg className="icon icon--sm" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="3" y="3.5" width="14" height="13" rx="2" />
+            <circle cx="10" cy="10" r="2.75" />
+            <path d="M5.5 16.5v1M14.5 16.5v1" />
+          </svg>
         </span>
         <span>Ledger</span>
       </div>
@@ -57,15 +62,25 @@ export function Login({ expired }: { expired: boolean }) {
             <label className="field__label" htmlFor="login-password">
               Password
             </label>
-            <input
-              id="login-password"
-              className="input"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <span className="input-affix input-affix--button">
+              <input
+                id="login-password"
+                className="input"
+                type={show ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm input-affix__button"
+                aria-pressed={show}
+                onClick={() => setShow((v) => !v)}
+              >
+                {show ? "Hide" : "Show"}
+              </button>
+            </span>
           </div>
           <button
             type="submit"
@@ -78,7 +93,7 @@ export function Login({ expired }: { expired: boolean }) {
         </div>
         <p className="login__note">
           <Lock />
-          <span>For your security, sessions end after 15 minutes of inactivity.</span>
+          <span>For your security, you’re signed out after 15 minutes of inactivity.</span>
         </p>
       </form>
     </main>

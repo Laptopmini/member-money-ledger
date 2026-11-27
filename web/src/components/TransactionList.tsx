@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFlags } from "../api/auth";
-import { useCategories, useRecategorize, useSuggestion, useTransactions } from "../api/queries";
+import {
+  type RowNote,
+  useCategories,
+  useRecategorize,
+  useSuggestion,
+  useTransactions,
+} from "../api/queries";
 import type { Category, Transaction } from "../api/types";
 import { formatPostedOn, monthLabel, monthRange } from "../lib/dates";
 import { formatMinor } from "../lib/money";
@@ -9,7 +15,7 @@ import { useUrlFilters } from "../lib/useUrlFilters";
 import { useVendorDown, VENDOR_DOWN_REASON } from "./Banners";
 import { ErrorState } from "./ErrorState";
 import { Filters } from "./Filters";
-import { Alert, ChevronDown, Clock, Plus } from "./icons";
+import { Alert, ChevronDown, Clock, Lightbulb, Plus, Search } from "./icons";
 import { TransactionDrawer } from "./TransactionDrawer";
 
 function Badges({ t }: { t: Transaction }) {
@@ -61,7 +67,7 @@ function CategorySelect({
   const uncategorized = t.category === null;
   return (
     <label
-      className={`cat-picker ${uncategorized ? "cat-picker--uncategorized" : known ? `cat--${t.category}` : "cat-picker--other"}${saving ? " is-saving" : ""}${disabled ? " is-disabled" : ""}`}
+      className={`cat-picker ${uncategorized ? "cat-picker--uncategorized" : known ? `cat--${t.category}` : "cat-picker--other"}${saving ? " is-saving" : ""}${recat.rolledBack.has(t.id) ? " is-rolled-back" : ""}${disabled ? " is-disabled" : ""}`}
       title={disabled ? VENDOR_DOWN_REASON : undefined}
     >
       {uncategorized ? <Plus /> : <span className="cat-dot" aria-hidden="true" />}
@@ -220,7 +226,58 @@ function Row({
         </span>
         <Badges t={t} />
       </div>
+      {recat.notes[t.id] && <RowNoteView id={t.id} note={recat.notes[t.id]} recat={recat} />}
     </li>
+  );
+}
+
+function RowNoteView({ id, note, recat }: { id: string; note: RowNote; recat: Recat }) {
+  if (note.kind === "rule") {
+    return (
+      <div className="txn-row__note">
+        <div className="inline-note inline-note--rule" role="status">
+          <p className="inline-note__text">
+            <Lightbulb />
+            <span>
+              Apply <strong>{note.label}</strong> to {note.count} other {note.merchant}{" "}
+              {note.count === 1 ? "transaction" : "transactions"}? Future {note.merchant}{" "}
+              transactions too.
+            </span>
+          </p>
+          <div className="inline-note__actions">
+            <button type="button" className="btn btn--primary btn--sm" onClick={note.apply}>
+              Apply
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => recat.setNote(id, null)}
+            >
+              Not now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="txn-row__note">
+      <div className="inline-note inline-note--stale" role="alert">
+        <p className="inline-note__text">
+          <Alert />
+          <span>{note.message}</span>
+        </p>
+        <div className="inline-note__actions">
+          <button
+            type="button"
+            className="btn btn--secondary btn--sm"
+            onClick={() => recat.setNote(id, null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -242,7 +299,17 @@ export function TransactionList() {
   };
   const q = useTransactions(params);
   const rows = useMemo(() => q.data?.pages.flatMap((p) => p.results) ?? [], [q.data]);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenIdState] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get("txn"),
+  );
+  const setOpenId = (id: string | null) => {
+    setOpenIdState(id);
+    const sp = new URLSearchParams(window.location.search);
+    if (id) sp.set("txn", id);
+    else sp.delete("txn");
+    const qs = sp.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+  };
   const triggerRef = useRef<HTMLElement | null>(null);
   const openDrawer = (id: string, trigger: HTMLElement) => {
     triggerRef.current = trigger;
@@ -273,21 +340,50 @@ export function TransactionList() {
   let body: React.ReactNode;
   if (q.isPending) {
     body = (
-      <div aria-busy="true" className="card__body">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span key={i} className="skeleton skeleton--option" />
+      <ol className="txn-list" aria-busy="true" aria-label="Loading transactions">
+        {[
+          ["45%", "40%"],
+          ["62%", "40%"],
+          ["50%", "40%"],
+          ["55%", "40%"],
+        ].map(([w1, w2]) => (
+          <li key={w1} className="txn-row">
+            <div className="txn-row__main">
+              <span
+                className="skeleton skeleton--text"
+                style={{ "--w": w1 } as React.CSSProperties}
+              />
+              <span
+                className="skeleton skeleton--text"
+                style={{ "--w": w2 } as React.CSSProperties}
+              />
+            </div>
+            <div className="txn-row__category">
+              <span className="skeleton skeleton--chip" />
+            </div>
+            <div className="txn-row__amount">
+              <span
+                className="skeleton skeleton--text"
+                style={{ "--w": "5em" } as React.CSSProperties}
+              />
+            </div>
+          </li>
         ))}
-      </div>
+      </ol>
     );
   } else if (q.isError && rows.length === 0) {
     body = <ErrorState title="Couldn't load transactions" onRetry={() => q.refetch()} />;
   } else if (rows.length === 0) {
     body = hasFilters ? (
-      <div className="state">
+      <div className="state" role="status">
+        <span className="state__icon">
+          <Search size={20} />
+        </span>
         <p className="state__title">No transactions match these filters</p>
+        <p className="state__text">Try a wider date range or fewer categories.</p>
         <button
           type="button"
-          className="btn"
+          className="btn btn--secondary"
           onClick={() => {
             clearFilters();
             goToTransactions();
@@ -297,21 +393,29 @@ export function TransactionList() {
         </button>
       </div>
     ) : (
-      <div className="state">
+      <div className="state" role="status">
+        <span className="state__icon">
+          <Clock size={20} />
+        </span>
         <p className="state__title">
           {explicit ? "No transactions in this date range" : "No transactions in this month"}
         </p>
-        <p className="state__hint">Your transactions will appear after the first sync.</p>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => {
-            setFilters({ from: "", to: "" });
-            goToTransactions();
-          }}
-        >
-          Reset dates
-        </button>
+        <p className="state__text">
+          Your transactions will appear after the first sync. This usually takes a minute after you
+          connect your bank.
+        </p>
+        {explicit && (
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => {
+              setFilters({ from: "", to: "" });
+              goToTransactions();
+            }}
+          >
+            Reset dates
+          </button>
+        )}
       </div>
     );
   } else {
@@ -401,17 +505,13 @@ export function TransactionList() {
           txn={rows.find((r) => r.id === openId)}
           categories={categories.data ?? []}
           onClose={closeDrawer}
-          picker={(() => {
+          disabled={vendorDown}
+          loading={q.isPending}
+          onPick={(key) => {
             const t = rows.find((r) => r.id === openId);
-            return t ? (
-              <CategorySelect
-                t={t}
-                categories={categories.data ?? []}
-                disabled={vendorDown}
-                recat={recat}
-              />
-            ) : null;
-          })()}
+            if (t && key !== t.category)
+              recat.recategorize({ id: t.id, category: key, expected_updated_at: t.updated_at });
+          }}
         />
       )}
       {vendorDown && <p className="field__hint">{VENDOR_DOWN_REASON}</p>}

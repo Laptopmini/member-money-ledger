@@ -1,6 +1,6 @@
 import { useRefresh, useSyncStatus } from "../api/queries";
 import { formatClockOrDate, formatRelative } from "../lib/dates";
-import { Alert, Info } from "./icons";
+import { Alert, Info, Refresh } from "./icons";
 
 export function useVendorDown(): boolean {
   return useSyncStatus().data?.state === "vendor_down";
@@ -26,6 +26,16 @@ export function Banners() {
               {last ? ` Showing data from ${formatClockOrDate(last)}.` : ""} Changes can't be saved
               until it's back.
             </p>
+          </div>
+          <div className="banner__actions">
+            <button
+              type="button"
+              className="btn btn--secondary btn--sm"
+              disabled={refresh.isPending}
+              onClick={() => refresh.mutate()}
+            >
+              <Refresh /> Try again
+            </button>
           </div>
         </div>
       )}

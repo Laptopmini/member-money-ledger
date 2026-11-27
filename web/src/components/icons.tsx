@@ -115,3 +115,4 @@ export const Lock = (p: P) => (
     <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
   </Icon>
 );
+export const RefreshIcon = Refresh;
