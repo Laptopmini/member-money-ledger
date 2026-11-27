@@ -17,6 +17,13 @@
     }
   },
   "files": {
-    "includes": ["**", "!dist", "!src/api/schema.d.ts"]
+    "includes": [
+      "**",
+      "!dist",
+      "!src/api/schema.d.ts",
+      "!test-results",
+      "!playwright-report",
+      "!e2e/.auth"
+    ]
   }
 }
