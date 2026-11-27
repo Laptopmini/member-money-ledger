@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any
 
 from rest_framework import serializers
@@ -143,3 +144,84 @@ class ErrorBodySerializer(serializers.Serializer[Any]):
 
 class ErrorSerializer(serializers.Serializer[Any]):
     error = ErrorBodySerializer()
+
+
+class UserSerializer(serializers.Serializer[Any]):
+    email = serializers.CharField()
+    name = serializers.CharField()
+
+
+class LoginRequestSerializer(serializers.Serializer[Any]):
+    email = serializers.CharField(max_length=254)
+    password = serializers.CharField(max_length=256, trim_whitespace=False)
+
+
+class LoginResponseSerializer(serializers.Serializer[Any]):
+    user = UserSerializer()
+    idle_timeout_seconds = serializers.IntegerField()
+
+
+class MeSerializer(serializers.Serializer[Any]):
+    user = UserSerializer()
+    idle_timeout_seconds = serializers.IntegerField()
+    expires_in_seconds = serializers.IntegerField()
+
+
+class EmptySerializer(serializers.Serializer[Any]):
+    pass
+
+
+# Flag keys contain hyphens, so the serializer is built dynamically to keep the wire names.
+FlagsSerializer = type(
+    "FlagsSerializer",
+    (serializers.Serializer,),
+    {
+        k: serializers.BooleanField()
+        for k in ("tax-set-aside", "auth-required", "merchant-rules", "category-suggestions")
+    },
+)
+
+
+SET_ASIDE_STATUS_CHOICES = [(k, k) for k in ("on_track", "behind", "no_income")]
+
+
+class SetAsideSerializer(serializers.Serializer[Any]):
+    quarter = serializers.CharField()
+    period_start = serializers.DateField()
+    period_end = serializers.DateField()
+    due_on = serializers.DateField()
+    days_until_due = serializers.IntegerField()
+    rate = serializers.FloatField()
+    income_cents = serializers.IntegerField()
+    deductible_cents = serializers.IntegerField()
+    profit_cents = serializers.IntegerField()
+    estimate_cents = serializers.IntegerField()
+    set_aside_cents = serializers.IntegerField()
+    gap_cents = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=SET_ASIDE_STATUS_CHOICES)
+    uncategorized_debit_count = serializers.IntegerField()
+    uncategorized_debit_cents = serializers.IntegerField()
+    potential_reduction_cents = serializers.IntegerField()
+    disclaimer = serializers.CharField()
+
+
+class TaxSettingsSerializer(serializers.Serializer[Any]):
+    rate = serializers.DecimalField(
+        max_digits=4, decimal_places=3, min_value=Decimal(0), max_value=Decimal("0.6")
+    )
+
+
+class TaxSettingsResponseSerializer(serializers.Serializer[Any]):
+    rate = serializers.FloatField()
+
+
+class SetAsideMarkRequestSerializer(serializers.Serializer[Any]):
+    quarter = serializers.CharField(max_length=7)
+    amount_cents = serializers.IntegerField(min_value=1, max_value=10**12)
+
+
+class SetAsideMarkSerializer(serializers.Serializer[Any]):
+    quarter = serializers.CharField()
+    amount_cents = serializers.IntegerField()
+    set_aside_cents = serializers.IntegerField()
+    created_at = serializers.DateTimeField()

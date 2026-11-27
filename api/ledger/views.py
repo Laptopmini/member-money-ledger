@@ -13,6 +13,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status as http
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +22,7 @@ from .categories import CATEGORIES, UNCATEGORIZED_LABEL, is_valid_category, labe
 from .errors import ApiError, request_id_of
 from .models import AuditEvent, DataVersion, SyncRejection, SyncRun, Transaction
 from .money import classify, signed_cents
+from .net import client_ip
 from .serializers import (
     CategoryListSerializer,
     ErrorSerializer,
@@ -66,6 +68,11 @@ ERRORS = {
     409: ErrorSerializer,
     502: ErrorSerializer,
 }
+
+
+def actor_label(request: Request) -> str:
+    user = request.user
+    return str(user.email or user.username)[:32] if user and user.is_authenticated else "member"
 
 
 class LedgerView(APIView):
@@ -262,11 +269,11 @@ class TransactionDetailView(LedgerView):
                 now = timezone.now()
                 Transaction.objects.filter(pk=txn.pk).update(deleted_at=now)
                 AuditEvent.objects.create(
-                    actor="member",
+                    actor=actor_label(request),
                     action="tombstoned",
                     txn_id=txn.pk,
                     request_id=request_id_of(request),
-                    ip=request.META.get("REMOTE_ADDR") or None,
+                    ip=client_ip(request),
                 )
                 DataVersion.bump()
                 error = ApiError(404, "not_found", "Transaction not found.")
@@ -295,13 +302,13 @@ class TransactionDetailView(LedgerView):
                     txn.deleted_at = None
                     txn.save()
                     AuditEvent.objects.create(
-                        actor="member",
+                        actor=actor_label(request),
                         action="recategorize" if "category" in fields else "describe",
                         txn_id=txn.pk,
                         before=before,
                         after={k: getattr(txn, k) for k in fields},
                         request_id=request_id_of(request),
-                        ip=request.META.get("REMOTE_ADDR") or None,
+                        ip=client_ip(request),
                     )
                     DataVersion.bump()
                     result = txn
@@ -329,7 +336,7 @@ class TransactionHistoryView(LedgerView):
         results = [
             {
                 "at": e.at,
-                "actor": "you" if e.actor == "member" else e.actor,
+                "actor": e.actor if e.actor == "sync" else "you",
                 "action": e.action,
                 "before": e.before,
                 "after": e.after,
@@ -511,6 +518,7 @@ class SyncStatusView(LedgerView):
 
 
 class HealthView(LedgerView):
+    permission_classes = [AllowAny]
     auto_scope = False  # liveness probes are not throttled
 
     @extend_schema(

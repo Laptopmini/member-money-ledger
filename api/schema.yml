@@ -4,6 +4,109 @@ info:
   version: 1.0.0
   description: Mirror of the Ledgerly bank feed with recategorize write-through.
 paths:
+  /api/auth/csrf:
+    get:
+      operationId: getCsrf
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      tags:
+      - auth
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/login:
+    post:
+      operationId: login
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/auth/logout:
+    post:
+      operationId: logout
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      tags:
+      - auth
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/me:
+    get:
+      operationId: getMe
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      tags:
+      - auth
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/categories:
     get:
       operationId: listCategories
@@ -16,12 +119,31 @@ paths:
         without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - categories
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CategoryList'
+          description: ''
+  /api/flags:
+    get:
+      operationId: getFlags
+      description: Flags evaluated server-side. The UI mirrors them; the server enforces
+        them (trap 25).
+      tags:
+      - flags
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flags'
           description: ''
   /api/health:
     get:
@@ -35,6 +157,9 @@ paths:
         without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - health
+      security:
+      - sessionAuth: []
+      - {}
       responses:
         '200':
           content:
@@ -67,6 +192,8 @@ paths:
         required: true
       tags:
       - summary
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
@@ -94,6 +221,8 @@ paths:
         without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - sync
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
@@ -125,12 +254,130 @@ paths:
         without a CORS preflight (CSRF mitigation until session auth lands).
       tags:
       - sync
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SyncStatus'
+          description: ''
+  /api/tax/set-aside:
+    get:
+      operationId: getTaxSetAside
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      parameters:
+      - in: query
+        name: quarter
+        schema:
+          type: string
+        description: '2026-Q4; default: the current period'
+      - in: query
+        name: today
+        schema:
+          type: string
+        description: YYYY-MM-DD override (tests/demo)
+      tags:
+      - tax
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetAside'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/tax/set-aside-marks:
+    post:
+      operationId: createSetAsideMark
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      tags:
+      - tax
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetAsideMarkRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetAsideMark'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/tax/settings:
+    put:
+      operationId: updateTaxSettings
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (CSRF mitigation until session auth lands).
+      tags:
+      - tax
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxSettingsRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxSettingsResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: ''
   /api/transactions:
     get:
@@ -187,6 +434,8 @@ paths:
         description: YYYY-MM-DD, inclusive
       tags:
       - transactions
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
@@ -218,6 +467,8 @@ paths:
         required: true
       tags:
       - transactions
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
@@ -253,6 +504,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PatchedTransactionPatchRequest'
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
@@ -302,6 +555,8 @@ paths:
         required: true
       tags:
       - transactions
+      security:
+      - sessionAuth: []
       responses:
         '200':
           content:
@@ -412,6 +667,22 @@ components:
       - code
       - message
       - request_id
+    Flags:
+      type: object
+      properties:
+        tax-set-aside:
+          type: boolean
+        auth-required:
+          type: boolean
+        merchant-rules:
+          type: boolean
+        category-suggestions:
+          type: boolean
+      required:
+      - auth-required
+      - category-suggestions
+      - merchant-rules
+      - tax-set-aside
     Health:
       type: object
       properties:
@@ -462,6 +733,43 @@ components:
       - after
       - at
       - before
+    LoginRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+      required:
+      - email
+      - password
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        idle_timeout_seconds:
+          type: integer
+      required:
+      - idle_timeout_seconds
+      - user
+    Me:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        idle_timeout_seconds:
+          type: integer
+        expires_in_seconds:
+          type: integer
+      required:
+      - expires_in_seconds
+      - idle_timeout_seconds
+      - user
     PatchedTransactionPatchRequest:
       type: object
       properties:
@@ -492,6 +800,107 @@ components:
         * `transfer` - transfer
         * `uncategorized_credit` - uncategorized_credit
         * `excluded_currency` - excluded_currency
+    SetAside:
+      type: object
+      properties:
+        quarter:
+          type: string
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        due_on:
+          type: string
+          format: date
+        days_until_due:
+          type: integer
+        rate:
+          type: number
+          format: double
+        income_cents:
+          type: integer
+        deductible_cents:
+          type: integer
+        profit_cents:
+          type: integer
+        estimate_cents:
+          type: integer
+        set_aside_cents:
+          type: integer
+        gap_cents:
+          type: integer
+        status:
+          $ref: '#/components/schemas/SetAsideStatusEnum'
+        uncategorized_debit_count:
+          type: integer
+        uncategorized_debit_cents:
+          type: integer
+        potential_reduction_cents:
+          type: integer
+        disclaimer:
+          type: string
+      required:
+      - days_until_due
+      - deductible_cents
+      - disclaimer
+      - due_on
+      - estimate_cents
+      - gap_cents
+      - income_cents
+      - period_end
+      - period_start
+      - potential_reduction_cents
+      - profit_cents
+      - quarter
+      - rate
+      - set_aside_cents
+      - status
+      - uncategorized_debit_cents
+      - uncategorized_debit_count
+    SetAsideMark:
+      type: object
+      properties:
+        quarter:
+          type: string
+        amount_cents:
+          type: integer
+        set_aside_cents:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - amount_cents
+      - created_at
+      - quarter
+      - set_aside_cents
+    SetAsideMarkRequestRequest:
+      type: object
+      properties:
+        quarter:
+          type: string
+          minLength: 1
+          maxLength: 7
+        amount_cents:
+          type: integer
+          maximum: 1000000000000
+          minimum: 1
+          format: int64
+      required:
+      - amount_cents
+      - quarter
+    SetAsideStatusEnum:
+      enum:
+      - on_track
+      - behind
+      - no_income
+      type: string
+      description: |-
+        * `on_track` - on_track
+        * `behind` - behind
+        * `no_income` - no_income
     Summary:
       type: object
       properties:
@@ -607,6 +1016,23 @@ components:
       - rejected_count
       - stale
       - state
+    TaxSettingsRequest:
+      type: object
+      properties:
+        rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,3})?$
+      required:
+      - rate
+    TaxSettingsResponse:
+      type: object
+      properties:
+        rate:
+          type: number
+          format: double
+      required:
+      - rate
     Transaction:
       type: object
       properties:
@@ -707,6 +1133,16 @@ components:
       description: |-
         * `pending` - pending
         * `posted` - posted
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+      - email
+      - name
     VendorEnum:
       enum:
       - ok
@@ -715,3 +1151,8 @@ components:
       description: |-
         * `ok` - ok
         * `down` - down
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

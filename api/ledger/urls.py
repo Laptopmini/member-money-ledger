@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import auth_views, tax_views, views
 
 urlpatterns = [
     path("health", views.HealthView.as_view()),
@@ -10,6 +10,14 @@ urlpatterns = [
     path("transactions/<str:txn_id>", views.TransactionDetailView.as_view()),
     path("transactions/<str:txn_id>/history", views.TransactionHistoryView.as_view()),
     path("summary", views.SummaryView.as_view()),
+    path("flags", auth_views.FlagsView.as_view()),
+    path("auth/csrf", auth_views.CsrfView.as_view()),
+    path("auth/login", auth_views.LoginView.as_view()),
+    path("auth/logout", auth_views.LogoutView.as_view()),
+    path("auth/me", auth_views.MeView.as_view()),
+    path("tax/set-aside", tax_views.SetAsideView.as_view()),
+    path("tax/settings", tax_views.TaxSettingsView.as_view()),
+    path("tax/set-aside-marks", tax_views.SetAsideMarkView.as_view()),
     path("sync", views.SyncView.as_view()),
     path("sync/status", views.SyncStatusView.as_view()),
 ]
