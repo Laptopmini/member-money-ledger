@@ -67,7 +67,35 @@ export type FetchOptions = {
   signal?: AbortSignal;
 };
 
+let csrfInFlight: Promise<void> | null = null;
+
+/** Make sure the csrftoken cookie exists (or force a fresh one). Never throws. */
+export function ensureCsrf(force = false): Promise<void> {
+  if (!force && readCookie("csrftoken")) return Promise.resolve();
+  csrfInFlight ??= fetch("/api/auth/csrf", { credentials: "same-origin" })
+    .then(() => undefined)
+    .catch(() => undefined)
+    .finally(() => {
+      csrfInFlight = null;
+    });
+  return csrfInFlight;
+}
+
 export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promise<T> {
+  const unsafe = UNSAFE.has((opts.method ?? "GET").toUpperCase());
+  if (unsafe) await ensureCsrf();
+  try {
+    return await requestOnce<T>(path, opts);
+  } catch (e) {
+    if (unsafe && e instanceof ApiError && e.status === 403 && e.code === "csrf_failed") {
+      await ensureCsrf(true);
+      return requestOnce<T>(path, opts);
+    }
+    throw e;
+  }
+}
+
+async function requestOnce<T>(path: string, opts: FetchOptions): Promise<T> {
   const method = (opts.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";

@@ -1,12 +1,8 @@
 import { AppShell } from "./components/AppShell";
+import { AuthGate } from "./components/AuthGate";
 import { SetAsideCard } from "./components/SetAsideCard";
 import { Summary } from "./components/Summary";
 import { TransactionList } from "./components/TransactionList";
-
-/** Stage 4 seam: wrap children with the login/session gate here. */
-function AuthGate({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
-}
 
 export function App() {
   return (
