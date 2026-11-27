@@ -138,10 +138,25 @@ See `docs/security.md` for the threat model.
 
 ## Stretch goals / TODO
 
-- [x] Claude Design handback: tokens, icons, visual layer, transaction detail drawer with audit
-  history, account menu (theme + sign out), icon Refresh with sync-state dot, and a fidelity pass
-  against the mockups. Still to do: the mobile filter sheet, the drawer's radio-grid category
-  picker and editable description, and a `?txn=` deep link to the drawer
+- [ ] **Claude Design handback, higher fidelity.** Done so far:
+  - Tokens, icons and the visual layer.
+  - The detail drawer with audit history.
+  - The account menu.
+  - Icon Refresh with the sync dot.
+  - The summary card restyled like the mockup.
+  - Filter actions now scroll to and focus the transactions table.
+
+  Still open against `docs/design/handback/screens/app-overview.html`:
+  - The container-query app shell and grid from `base.css`.
+  - The month `<select>` in the picker.
+  - Net on its own row with its caption.
+  - The pending row in the category list.
+  - The table row and filter-bar design.
+  - The mobile filter sheet.
+  - The drawer's radio-grid category picker and editable description.
+  - A `?txn=` deep link to the drawer.
+- [ ] The vendor-down E2E is timing-sensitive: the sync worker can hold the sync lock while it
+  waits on the stopped vendor. It passed on rerun; give it a deterministic wait.
 - [x] Merchant rules (`merchant-rules`, off by default): turn it on in `flags/flags.json` to demo
 - [x] AI category suggestions (`category-suggestions` plus `LLM_BASE_URL`/`LLM_MODEL`): built and
   unit-tested. **The local eval is still to run.** LM Studio wasn't serving during the build,

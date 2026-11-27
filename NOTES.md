@@ -175,8 +175,12 @@ From `docs/process/03-execution-log.md` (UTC; T0 = 18:16:53Z):
 | Should tier: auth, idle timeout, flags, tax set-aside, CI | 19:09 | 52 |
 | Could tier: merchant rules, AI suggestions; E2E 10/10 | 19:16 | 59 |
 | Design handback applied | 19:16 | 60 |
-| Freeze, docs and final gates | 19:17–19:31 | 60–75 |
+| Paused for the owner's test run | 19:19 | 62 |
+| Detail drawer, account menu, flagd fix (owner's priorities) | 19:28 | 71 |
+| Fidelity pass, scroll-to-table, final gates, log closed | 19:35 | 79 |
 
-The build ran from 18:16:53Z to the final commit, inside the 90-minute box. The owner's
+The build ran from 18:16:53Z to 19:35Z, **79 minutes**, inside the 90-minute box. Work kept
+going past the T+75 freeze because the owner asked for the handback, flagd and fidelity work
+after their test run. The owner's
 own time was in the Claude Design session and in answering 15 decision questions, in 4
 batches.
