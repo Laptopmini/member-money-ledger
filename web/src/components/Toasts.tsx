@@ -5,6 +5,7 @@ export type Toast = {
   kind: "success" | "error";
   message: string;
   action?: { label: string; run: () => void };
+  secondary?: { label: string; run: () => void };
 };
 
 type Push = (t: Omit<Toast, "id">) => void;
@@ -22,8 +23,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     (t) => {
       const id = nextId.current++;
       setToasts((l) => [...l, { ...t, id }]);
-      // Errors with a Retry action stay until dismissed so keyboard users are not rushed.
-      if (!(t.kind === "error" && t.action)) setTimeout(() => dismiss(id), 5000);
+      // Toasts with an action stay until dismissed so keyboard users are not rushed.
+      if (!t.action) setTimeout(() => dismiss(id), 5000);
     },
     [dismiss],
   );
@@ -41,6 +42,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           }}
         >
           {t.action.label}
+        </button>
+      )}
+      {t.secondary && (
+        <button
+          type="button"
+          className="btn btn--ghost btn--small"
+          onClick={() => {
+            dismiss(t.id);
+            t.secondary?.run();
+          }}
+        >
+          {t.secondary.label}
         </button>
       )}
       <button

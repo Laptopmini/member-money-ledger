@@ -24,3 +24,5 @@ export type SetAside = Omit<S["SetAside"], "status"> & {
   uncategorized_credit_cents?: number;
 };
 export type SetAsideMark = S["SetAsideMark"];
+export type RulePreview = S["RulePreview"];
+export type MerchantRuleCreated = S["MerchantRuleCreated"];

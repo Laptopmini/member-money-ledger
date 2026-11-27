@@ -9,9 +9,12 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "../components/Toasts";
 import { addMonths } from "../lib/dates";
-import { type ApiError, apiFetch, buildQuery } from "./client";
+import { ApiError, apiFetch, buildQuery } from "./client";
 import type {
   Category,
+  Flags,
+  MerchantRuleCreated,
+  RulePreview,
   Summary,
   SyncStatus,
   Transaction,
@@ -107,6 +110,63 @@ function findRow(qc: QueryClient, id: string): Transaction | undefined {
   return undefined;
 }
 
+const prompted = new Set<string>();
+/** Test hook: the prompt is shown once per merchant per session. */
+export const resetRulePrompts = () => prompted.clear();
+
+async function offerMerchantRule(
+  qc: QueryClient,
+  toast: ReturnType<typeof useToast>,
+  merchant: string,
+  category: string,
+) {
+  const flags = qc.getQueryData<Flags>(["flags"]);
+  if (flags?.["merchant-rules"] !== true || prompted.has(merchant)) return;
+  let preview: RulePreview;
+  try {
+    preview = await apiFetch<RulePreview>(
+      `/api/rules/preview${buildQuery({ merchant, category })}`,
+    );
+  } catch {
+    return; // 404 feature_disabled or any failure: no prompt
+  }
+  if (preview.matching_uncategorized_count <= 0) return;
+  prompted.add(merchant);
+  const label =
+    qc.getQueryData<Category[]>(["categories"])?.find((c) => c.key === category)?.label ?? category;
+  const n = preview.matching_uncategorized_count;
+  toast({
+    kind: "success",
+    message: `Apply ${label} to ${n} other ${merchant} ${n === 1 ? "transaction" : "transactions"}? Future ${merchant} transactions too.`,
+    action: {
+      label: "Apply",
+      run: async () => {
+        try {
+          const res = await apiFetch<MerchantRuleCreated>("/api/rules", {
+            method: "POST",
+            body: { merchant, category },
+            userActivity: true,
+          });
+          toast({
+            kind: "success",
+            message: `Applied to ${res.applied_count ?? n} ${(res.applied_count ?? n) === 1 ? "transaction" : "transactions"}`,
+          });
+          for (const k of ["transactions", "summary", "set-aside"]) {
+            qc.invalidateQueries({ queryKey: [k] });
+          }
+        } catch (e) {
+          if (e instanceof ApiError && e.code === "feature_disabled") return;
+          toast({
+            kind: "error",
+            message: e instanceof ApiError ? e.message : "Couldn't apply the rule.",
+          });
+        }
+      },
+    },
+    secondary: { label: "Not now", run: () => {} },
+  });
+}
+
 const pick = (r: Transaction): RowFields => ({
   category: r.category,
   category_label: r.category_label,
@@ -153,6 +213,7 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
       return { before: row && pick(row) };
     },
     onSuccess: (server) => {
+      const merchant = server.merchant ?? findRow(qc, server.id)?.merchant;
       // The response may carry only some fields; never overwrite with undefined.
       const fields = Object.fromEntries(
         Object.entries(pick(server)).filter(([, v]) => v !== undefined),
@@ -160,6 +221,7 @@ export function useRecategorize(opts: { onSaved?: (row: Transaction) => void } =
       patchRow(qc, server.id, fields);
       toast({ kind: "success", message: "Saved to Ledgerly" });
       onSaved.current?.(server);
+      if (merchant && server.category) void offerMerchantRule(qc, toast, merchant, server.category);
     },
     onError: (err, vars, ctx) => {
       if (err.code === "vendor_unavailable") qc.invalidateQueries({ queryKey: ["sync-status"] });

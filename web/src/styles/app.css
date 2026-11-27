@@ -306,9 +306,9 @@ input[type="radio"] {
 
 /* Summary */
 .headline {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
 }
 .headline dt {
@@ -703,12 +703,16 @@ input[type="radio"] {
   }
 }
 
-.headline__item,
+.headline__item {
+  flex: 1 1 9rem;
+  min-width: 0;
+}
 .card {
   min-width: 0;
 }
 .headline .amount {
-  font-size: clamp(1rem, 5vw, 1.25rem);
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
 }
 
 /* Auth */

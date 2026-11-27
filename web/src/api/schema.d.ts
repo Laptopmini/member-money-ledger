@@ -165,6 +165,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        get: operations["listRules"];
+        put?: never;
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        post: operations["createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        delete: operations["deleteRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        get: operations["previewRule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/summary": {
         parameters: {
             query?: never;
@@ -479,6 +559,24 @@ export interface components {
             idle_timeout_seconds: number;
             expires_in_seconds: number;
         };
+        MerchantRule: {
+            id: number;
+            merchant: string;
+            category: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MerchantRuleCreated: {
+            rule: components["schemas"]["MerchantRule"];
+            applied_count: number;
+        };
+        MerchantRuleList: {
+            results: components["schemas"]["MerchantRule"][];
+        };
+        MerchantRuleRequestRequest: {
+            merchant: string;
+            category: string;
+        };
         PatchedTransactionPatchRequest: {
             category?: string | null;
             description?: string;
@@ -495,6 +593,11 @@ export interface components {
          * @enum {string}
          */
         RowKindEnum: "income" | "spend" | "refund" | "transfer" | "uncategorized_credit" | "excluded_currency";
+        RulePreview: {
+            merchant: string;
+            category: string;
+            matching_uncategorized_count: number;
+        };
         SetAside: {
             quarter: string;
             /** Format: date */
@@ -814,6 +917,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantRuleList"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantRuleRequestRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantRuleCreated"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    previewRule: {
+        parameters: {
+            query: {
+                category: string;
+                merchant: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulePreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
