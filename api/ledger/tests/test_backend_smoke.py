@@ -79,7 +79,30 @@ def test_error_envelope_everywhere() -> None:
         ("get", "/api/transactions/bad%20id", 404),
         ("get", "/api/transactions?cursor=zzz", 400),
     ]:
-        r = getattr(c, method)(url)
+        r = (
+            getattr(c, method)(url, "{}", content_type="application/json")
+            if method != "get"
+            else c.get(url)
+        )
         assert r.status_code == status
         body = r.json()["error"]
         assert {"code", "message", "request_id"} <= body.keys()
+
+
+def test_validator_bounds_and_nul() -> None:
+    for patch in (
+        {"merchant": "x" * 256},
+        {"account_id": "a" * 65},
+        {"category": "c" * 65},
+        {"merchant": "a\x00b"},
+        {"description": "a\x00b"},
+        {"amount_cents": 2**63},
+    ):
+        assert isinstance(validate_vendor_row({**GOOD, **patch}), str)
+    assert validate_vendor_row({**GOOD, "amount_cents": 2**63 - 1}) != "bad_amount_cents"
+
+
+@pytest.mark.django_db
+def test_non_json_mutation_is_415() -> None:
+    r = Client().post("/api/sync", "a=1", content_type="application/x-www-form-urlencoded")
+    assert r.status_code == 415 and r.json()["error"]["code"] == "unsupported_media_type"

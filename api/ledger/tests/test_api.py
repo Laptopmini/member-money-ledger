@@ -156,7 +156,7 @@ def test_patch_stale_409(seed_db, fake, api):
     """Trap 13: a stale expected_updated_at is refused and the vendor is not called."""
     r = api.patch(
         "/api/transactions/txn_000004",
-        {"category": "travel", "expected_updated_at": "2020-01-01T00:00:00Z"},
+        {"category": "travel", "expected_updated_at": "2026-10-14T22:18:39Z"},  # 1s old
         format="json",
     )
     assert_envelope(r, 409, "stale")
@@ -229,7 +229,7 @@ def test_summary_etag_changes_on_recategorize(seed_db, fake, api):
 def test_post_sync_and_status(db, fake):
     api = APIClient()
     assert api.get("/api/sync/status").json()["state"] == "never"
-    r = api.post("/api/sync")
+    r = api.post("/api/sync", {}, format="json")
     assert r.status_code == 200, r.content
     assert r.json()["upserted"] == 5
     st = api.get("/api/sync/status").json()
@@ -239,9 +239,9 @@ def test_post_sync_and_status(db, fake):
 def test_post_sync_vendor_down(db, fake):
     """Trap 11: vendor down -> 502, status shows vendor_down, data stays readable."""
     api = APIClient()
-    api.post("/api/sync")
+    api.post("/api/sync", {}, format="json")
     fake.down = True
-    r = api.post("/api/sync")
+    r = api.post("/api/sync", {}, format="json")
     assert_envelope(r, 502, "vendor_unavailable")
     assert api.get("/api/sync/status").json()["state"] == "vendor_down"
     assert Transaction.objects.count() == 5
