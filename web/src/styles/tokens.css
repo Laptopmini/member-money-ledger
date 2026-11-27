@@ -1,124 +1,348 @@
-/* Placeholder tokens; replaced by the design handback. Keep every color here. */
+/* ==========================================================================
+   Collective · Member Money — design tokens
+   Single source of truth for every color, size, radius, shadow, font,
+   motion value and z-index. Components (screens/base.css) read ONLY these.
+
+   Theme resolution:
+     1. :root                         → light (default)
+     2. @media (prefers-color-scheme: dark) on :root:not([data-theme="light"]) → dark
+     3. [data-theme="dark"]           → dark (manual toggle)
+     4. [data-theme="light"]          → light (manual toggle, beats a dark OS)
+   Set data-theme on <html>. Remove the attribute for "System".
+   ========================================================================== */
+
 :root {
-  /* Contrast ratios (WCAG relative luminance):
-     light: amount-muted #4a5568 on surface #fff 7.53, on surface-2 6.59;
-            control-border #7b8594 on surface #fff 3.73, on bg #f6f6f3 3.45.
-     dark:  amount-muted #b4bcc9 on surface #171b21 9.03, on surface-2 7.75;
-            control-border #6b7686 on surface #171b21 3.75, on bg #0f1216 4.08. */
   color-scheme: light;
-  --color-amount-muted: #4a5568;
-  --color-control-border: #7b8594;
+
+  /* ---- Color: surfaces ---------------------------------------------------- */
+  --color-bg: #f6f6f3; /* page */
+  --color-surface: #ffffff; /* cards, header, drawer */
+  --color-surface-sunken: #efefeb; /* tracks, inputs on cards, table head */
+  --color-surface-hover: #f2f2ee; /* row hover */
+  --color-surface-selected: #e8eff5; /* row open in drawer */
+  --color-scrim: rgb(17 18 19 / 0.4);
+
+  /* ---- Color: lines ------------------------------------------------------- */
+  --color-border: #e2e2dc; /* decorative dividers only (not a UI boundary) */
+  --color-border-strong: #84847c; /* input/control boundaries: ≥3:1 on surface + bg */
+
+  /* ---- Color: text -------------------------------------------------------- */
+  --color-text: #18191b; /* 17.4:1 on surface */
+  --color-text-muted: #4d5055; /* 8.0:1  secondary copy */
+  --color-text-subtle: #62656a; /* 5.9:1  meta, captions, pending amounts */
+  --color-text-inverse: #ffffff;
+
+  /* ---- Color: accent (actions, links, selected) --------------------------- */
+  --color-accent: #1d5b86; /* 7.0:1 on surface; white text on it 7.0:1 */
+  --color-accent-hover: #164a6e;
+  --color-accent-soft: #e6eef5; /* selected chip bg, info banner bg */
+  --color-accent-text: #164a6e; /* text on accent-soft: 8.4:1 */
+  --color-on-accent: #ffffff;
+  --color-focus: #1a5fd0; /* focus ring: ≥3:1 on every surface */
+
+  /* ---- Color: status ------------------------------------------------------ */
+  --color-positive: #1b6b3a; /* money in, on track: 6.4:1 */
+  --color-positive-soft: #e3f1e7;
+  --color-positive-fill: #2f8a50; /* progress fill, ≥3:1 vs track */
+  --color-warning: #874700; /* behind, vendor down text/icon: 6.5:1 */
+  --color-warning-soft: #fcf0db;
+  --color-warning-line: #c98a2e; /* banner edge, decorative */
+  --color-danger: #a8231b; /* error toasts, field errors only */
+  --color-danger-soft: #fbeae8;
+
+  /* ---- Color: money semantics (always paired with a sign or a word) ------- */
+  --color-money-in: var(--color-positive);
+  --color-money-out: var(--color-text);
+  --color-money-muted: var(--color-text-subtle); /* pending, transfer, excluded */
+
+  /* ---- Color: categorical palette for bars/dots (≥3:1 on surface) ---------
+     Calm hues only: no red, orange, amber or pink, which read as warnings. */
+  --color-cat-1: #2f6fa8; /* blue   */
+  --color-cat-2: #0e7490; /* teal   */
+  --color-cat-3: #1e7a55; /* green  */
+  --color-cat-4: #7c4dbf; /* purple */
+  --color-cat-5: #4a56c9; /* indigo */
+  --color-cat-6: #5b7a24; /* olive  */
+  --color-cat-7: #2a7f9e; /* sky    */
+  --color-cat-8: #5c5852; /* slate  */
+  --color-cat-uncategorized: #62656a; /* dashed/striped, never solid */
+
+  /* ---- Color: skeleton ---------------------------------------------------- */
+  --color-skeleton: #e9e9e4;
+  --color-skeleton-shine: #f6f6f2;
+
+  /* ---- Typography --------------------------------------------------------- */
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --font-numeric: tabular-nums lining-nums; /* use with font-variant-numeric */
+
+  --text-xs: 0.75rem; /* 12px  badges, captions */
+  --text-sm: 0.875rem; /* 14px  meta, table body on desktop */
+  --text-md: 1rem; /* 16px  body, inputs (prevents iOS zoom) */
+  --text-lg: 1.125rem; /* 18px  card titles */
+  --text-xl: 1.375rem; /* 22px  headline numbers (mobile) */
+  --text-2xl: 1.75rem; /* 28px  headline numbers (desktop) */
+  --text-3xl: 2.25rem; /* 36px  set-aside amount */
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.6;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-tight: -0.01em;
+  --tracking-caps: 0.04em;
+
+  /* ---- Space (4px grid) --------------------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem; /* 4  */
+  --space-2: 0.5rem; /* 8  */
+  --space-3: 0.75rem; /* 12 */
+  --space-4: 1rem; /* 16 */
+  --space-5: 1.25rem; /* 20 */
+  --space-6: 1.5rem; /* 24 */
+  --space-8: 2rem; /* 32 */
+  --space-10: 2.5rem; /* 40 */
+  --space-12: 3rem; /* 48 */
+  --space-16: 4rem; /* 64 */
+
+  /* ---- Sizes -------------------------------------------------------------- */
+  --target-min: 24px; /* WCAG 2.2 AA minimum */
+  --target-touch: 44px; /* mobile target */
+  --control-h: 40px; /* buttons, inputs (desktop) */
+  --control-h-sm: 32px; /* compact buttons, chips (desktop) */
+  --control-h-touch: 44px; /* buttons, inputs, chips (mobile) */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --header-h: 64px;
+  --content-max: 1200px;
+  --drawer-w: 440px;
+  --sheet-max-h: 88dvh;
+  --dialog-w: 400px;
+  --toast-w: 380px;
+  --bar-h: 10px; /* category bars */
+  --progress-h: 12px; /* set-aside progress */
+  --border-w: 1px;
+  --focus-w: 2px;
+  --focus-offset: 2px;
+  --bp-desktop: 900px; /* documentation only: container queries use 900px literally */
+
+  /* ---- Radius ------------------------------------------------------------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px; /* bottom sheet top corners */
+  --radius-pill: 999px;
+
+  /* ---- Shadow ------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgb(17 18 19 / 0.06);
+  --shadow-md: 0 2px 8px rgb(17 18 19 / 0.08), 0 1px 2px rgb(17 18 19 / 0.06);
+  --shadow-lg: 0 12px 32px rgb(17 18 19 / 0.16), 0 2px 6px rgb(17 18 19 / 0.08);
+
+  /* ---- Motion ------------------------------------------------------------- */
+  --dur-fast: 150ms; /* hover, focus, chip state */
+  --dur-base: 200ms; /* toasts, optimistic flash, popovers */
+  --dur-slow: 250ms; /* drawer/sheet, progress fill */
+  --dur-shimmer: 1400ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Z-index ------------------------------------------------------------ */
+  --z-base: 0;
+  --z-sticky: 10; /* app header, table head */
+  --z-popover: 20; /* filter menus, tooltips */
+  --z-scrim: 30;
+  --z-drawer: 40; /* detail drawer / sheet */
+  --z-dialog: 50; /* session timeout */
+  --z-toast: 60;
+}
+
+/* ---- Light (explicit, beats a dark OS when the member picks Light) -------- */
+[data-theme="light"] {
+  color-scheme: light;
   --color-bg: #f6f6f3;
   --color-surface: #ffffff;
-  --color-surface-2: #eef0f3;
-  --color-text: #181b20;
-  --color-muted: #566070;
-  --color-border: #c9cfd8;
-  --color-accent: #1a4fc4;
-  --color-accent-contrast: #ffffff;
-  --color-focus: #1a4fc4;
-  --color-credit: #0b6b38;
-  --color-debit: #9c2a1f;
-  --color-warn-bg: #fff3d1;
-  --color-warn-text: #5e3f00;
-  --color-info-bg: #e6eefc;
-  --color-info-text: #14316e;
-  --color-error-bg: #fde8e6;
-  --color-error-text: #7a1c13;
-  --color-success-bg: #e2f4e8;
-  --color-success-text: #0b4a28;
-  --cat-1: #2f6fdb;
-  --cat-2: #b4540f;
-  --cat-3: #1c8a6a;
-  --cat-4: #8a45c4;
-  --cat-5: #a3871a;
-  --cat-6: #c0356a;
-  --cat-7: #3f7f9c;
-  --cat-8: #6b7a2a;
-
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --radius-1: 6px;
-  --radius-2: 12px;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.5rem;
-  --motion-fast: 150ms;
-  --motion-base: 200ms;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.08);
+  --color-surface-sunken: #efefeb;
+  --color-surface-hover: #f2f2ee;
+  --color-surface-selected: #e8eff5;
+  --color-scrim: rgb(17 18 19 / 0.4);
+  --color-border: #e2e2dc;
+  --color-border-strong: #84847c;
+  --color-text: #18191b;
+  --color-text-muted: #4d5055;
+  --color-text-subtle: #62656a;
+  --color-text-inverse: #ffffff;
+  --color-accent: #1d5b86;
+  --color-accent-hover: #164a6e;
+  --color-accent-soft: #e6eef5;
+  --color-accent-text: #164a6e;
+  --color-on-accent: #ffffff;
+  --color-focus: #1a5fd0;
+  --color-positive: #1b6b3a;
+  --color-positive-soft: #e3f1e7;
+  --color-positive-fill: #2f8a50;
+  --color-warning: #874700;
+  --color-warning-soft: #fcf0db;
+  --color-warning-line: #c98a2e;
+  --color-danger: #a8231b;
+  --color-danger-soft: #fbeae8;
+  --color-cat-1: #2f6fa8;
+  --color-cat-2: #0e7490;
+  --color-cat-3: #1e7a55;
+  --color-cat-4: #7c4dbf;
+  --color-cat-5: #4a56c9;
+  --color-cat-6: #5b7a24;
+  --color-cat-7: #2a7f9e;
+  --color-cat-8: #5c5852;
+  --color-cat-uncategorized: #62656a;
+  --color-skeleton: #e9e9e4;
+  --color-skeleton-shine: #f6f6f2;
+  --shadow-sm: 0 1px 2px rgb(17 18 19 / 0.06);
+  --shadow-md: 0 2px 8px rgb(17 18 19 / 0.08), 0 1px 2px rgb(17 18 19 / 0.06);
+  --shadow-lg: 0 12px 32px rgb(17 18 19 / 0.16), 0 2px 6px rgb(17 18 19 / 0.08);
 }
 
-[data-theme="dark"] {
-  color-scheme: dark;
-  --color-amount-muted: #b4bcc9;
-  --color-control-border: #6b7686;
-  --color-bg: #0f1216;
-  --color-surface: #171b21;
-  --color-surface-2: #222831;
-  --color-text: #e9ecf0;
-  --color-muted: #a2abb9;
-  --color-border: #3a424f;
-  --color-accent: #8fb0ff;
-  --color-accent-contrast: #0b1220;
-  --color-focus: #8fb0ff;
-  --color-credit: #62d48e;
-  --color-debit: #ff9d92;
-  --color-warn-bg: #3a2c08;
-  --color-warn-text: #ffd98a;
-  --color-info-bg: #16284d;
-  --color-info-text: #c3d5ff;
-  --color-error-bg: #451a15;
-  --color-error-text: #ffc4bd;
-  --color-success-bg: #123422;
-  --color-success-text: #b3efc9;
-  --cat-1: #7aa5ff;
-  --cat-2: #f0a05a;
-  --cat-3: #55c9a4;
-  --cat-4: #c99aef;
-  --cat-5: #dcc25a;
-  --cat-6: #f08ab0;
-  --cat-7: #7cc0dd;
-  --cat-8: #b3c65a;
-  --shadow-1: none;
-}
-
+/* ---- Dark: system preference (unless the member forced Light) ------------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --color-amount-muted: #b4bcc9;
-    --color-control-border: #6b7686;
-    --color-bg: #0f1216;
-    --color-surface: #171b21;
-    --color-surface-2: #222831;
-    --color-text: #e9ecf0;
-    --color-muted: #a2abb9;
-    --color-border: #3a424f;
-    --color-accent: #8fb0ff;
-    --color-accent-contrast: #0b1220;
-    --color-focus: #8fb0ff;
-    --color-credit: #62d48e;
-    --color-debit: #ff9d92;
-    --color-warn-bg: #3a2c08;
-    --color-warn-text: #ffd98a;
-    --color-info-bg: #16284d;
-    --color-info-text: #c3d5ff;
-    --color-error-bg: #451a15;
-    --color-error-text: #ffc4bd;
-    --color-success-bg: #123422;
-    --color-success-text: #b3efc9;
-    --cat-1: #7aa5ff;
-    --cat-2: #f0a05a;
-    --cat-3: #55c9a4;
-    --cat-4: #c99aef;
-    --cat-5: #dcc25a;
-    --cat-6: #f08ab0;
-    --cat-7: #7cc0dd;
-    --cat-8: #b3c65a;
-    --shadow-1: none;
+    --color-bg: #111213;
+    --color-surface: #1a1b1d;
+    --color-surface-sunken: #141516;
+    --color-surface-hover: #222326;
+    --color-surface-selected: #1d2a36;
+    --color-scrim: rgb(0 0 0 / 0.6);
+    --color-border: #2e3033;
+    --color-border-strong: #7c7f85;
+    --color-text: #ededea;
+    --color-text-muted: #babcc0;
+    --color-text-subtle: #9fa2a7;
+    --color-text-inverse: #111213;
+    --color-accent: #86b8e3;
+    --color-accent-hover: #a5cbec;
+    --color-accent-soft: #1d2c3a;
+    --color-accent-text: #a5cbec;
+    --color-on-accent: #0d1b27;
+    --color-focus: #8cb8ff;
+    --color-positive: #74cc92;
+    --color-positive-soft: #15281c;
+    --color-positive-fill: #4fb071;
+    --color-warning: #f0b860;
+    --color-warning-soft: #2b2111;
+    --color-warning-line: #8a6420;
+    --color-danger: #f29389;
+    --color-danger-soft: #2e1715;
+    --color-cat-1: #6ea6dc;
+    --color-cat-2: #4bb3cc;
+    --color-cat-3: #4fb88a;
+    --color-cat-4: #a98be0;
+    --color-cat-5: #8f98ec;
+    --color-cat-6: #9dbb5c;
+    --color-cat-7: #6fb8d6;
+    --color-cat-8: #a19c94;
+    --color-cat-uncategorized: #9fa2a7;
+    --color-skeleton: #232427;
+    --color-skeleton-shine: #2d2e32;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
   }
+}
+
+/* ---- Dark: manual toggle -------------------------------------------------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #111213;
+  --color-surface: #1a1b1d;
+  --color-surface-sunken: #141516;
+  --color-surface-hover: #222326;
+  --color-surface-selected: #1d2a36;
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --color-border: #2e3033;
+  --color-border-strong: #7c7f85;
+  --color-text: #ededea;
+  --color-text-muted: #babcc0;
+  --color-text-subtle: #9fa2a7;
+  --color-text-inverse: #111213;
+  --color-accent: #86b8e3;
+  --color-accent-hover: #a5cbec;
+  --color-accent-soft: #1d2c3a;
+  --color-accent-text: #a5cbec;
+  --color-on-accent: #0d1b27;
+  --color-focus: #8cb8ff;
+  --color-positive: #74cc92;
+  --color-positive-soft: #15281c;
+  --color-positive-fill: #4fb071;
+  --color-warning: #f0b860;
+  --color-warning-soft: #2b2111;
+  --color-warning-line: #8a6420;
+  --color-danger: #f29389;
+  --color-danger-soft: #2e1715;
+  --color-cat-1: #6ea6dc;
+  --color-cat-2: #4bb3cc;
+  --color-cat-3: #4fb88a;
+  --color-cat-4: #a98be0;
+  --color-cat-5: #8f98ec;
+  --color-cat-6: #9dbb5c;
+  --color-cat-7: #6fb8d6;
+  --color-cat-8: #a19c94;
+  --color-cat-uncategorized: #9fa2a7;
+  --color-skeleton: #232427;
+  --color-skeleton-shine: #2d2e32;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+/* ---- Reduced motion: every duration collapses to 0 ------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-shimmer: 0ms;
+  }
+}
+
+/* ---- Aliases: our component CSS names mapped onto the handback tokens ------ */
+:root {
+  --color-surface-2: var(--color-surface-sunken);
+  --color-muted: var(--color-text-muted);
+  --color-control-border: var(--color-border-strong);
+  --color-amount-muted: var(--color-money-muted);
+  --color-accent-contrast: var(--color-on-accent);
+  --color-credit: var(--color-money-in);
+  --color-debit: var(--color-money-out);
+  --color-warn-bg: var(--color-warning-soft);
+  --color-warn-text: var(--color-warning);
+  --color-info-bg: var(--color-accent-soft);
+  --color-info-text: var(--color-accent-text);
+  --color-error-bg: var(--color-danger-soft);
+  --color-error-text: var(--color-danger);
+  --color-success-bg: var(--color-positive-soft);
+  --color-success-text: var(--color-positive);
+  --cat-1: var(--color-cat-1);
+  --cat-2: var(--color-cat-2);
+  --cat-3: var(--color-cat-3);
+  --cat-4: var(--color-cat-4);
+  --cat-5: var(--color-cat-5);
+  --cat-6: var(--color-cat-6);
+  --cat-7: var(--color-cat-7);
+  --cat-8: var(--color-cat-8);
+  --radius-1: var(--radius-sm);
+  --radius-2: var(--radius-lg);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-md);
+  --font-size-lg: var(--text-xl);
+  --motion-fast: var(--dur-fast);
+  --motion-base: var(--dur-base);
+  --shadow-1: var(--shadow-sm);
 }

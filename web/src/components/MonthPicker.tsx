@@ -1,5 +1,6 @@
 import { addMonths, monthLabel } from "../lib/dates";
 import { useUrlFilters } from "../lib/useUrlFilters";
+import { ChevronLeft, ChevronRight } from "./icons";
 
 export function MonthPicker() {
   const { filters, setFilters } = useUrlFilters();
@@ -13,7 +14,7 @@ export function MonthPicker() {
         aria-label={`Previous month, ${monthLabel(addMonths(filters.month, -1))}`}
         onClick={() => go(addMonths(filters.month, -1))}
       >
-        ‹
+        <ChevronLeft />
       </button>
       <span className="month-picker__label" aria-live="polite">
         {monthLabel(filters.month)}
@@ -24,7 +25,7 @@ export function MonthPicker() {
         aria-label={`Next month, ${monthLabel(addMonths(filters.month, 1))}`}
         onClick={() => go(addMonths(filters.month, 1))}
       >
-        ›
+        <ChevronRight />
       </button>
     </nav>
   );

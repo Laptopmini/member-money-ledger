@@ -8,6 +8,7 @@ import { useUrlFilters } from "../lib/useUrlFilters";
 import { useVendorDown, VENDOR_DOWN_REASON } from "./Banners";
 import { ErrorState } from "./ErrorState";
 import { Filters } from "./Filters";
+import { Clock } from "./icons";
 
 function Badges({ t }: { t: Transaction }) {
   return (
@@ -17,7 +18,7 @@ function Badges({ t }: { t: Transaction }) {
           className="badge badge--pending"
           title="Pending: may change when it posts. Not in totals."
         >
-          Pending
+          <Clock /> Pending
         </span>
       )}
       {t.kind === "refund" && <span className="badge badge--refund">Refund</span>}

@@ -1,5 +1,6 @@
 import { useAuth } from "./AuthGate";
 import { Banners } from "./Banners";
+import { LogOut } from "./icons";
 import { MonthPicker } from "./MonthPicker";
 import { SyncStatus } from "./SyncStatus";
 import { ThemeToggle } from "./ThemeToggle";
@@ -13,7 +14,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </a>
       <header className="app-header">
         <div className="app-header__inner">
-          <h1 className="app-header__title">Ledger</h1>
+          <h1 className="app-header__title">
+            <span className="app-header__brand-mark" aria-hidden="true">
+              L
+            </span>
+            Ledger
+          </h1>
           <ThemeToggle />
           {auth && (
             <div className="account">
@@ -24,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 disabled={auth.signingOut}
                 onClick={auth.signOut}
               >
-                Sign out
+                <LogOut /> Sign out
               </button>
             </div>
           )}

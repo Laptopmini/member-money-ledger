@@ -6,6 +6,7 @@ import { formatLongDate, formatPostedOn, shortMonthName } from "../lib/dates";
 import { centsToDollarsInput, formatCents, parseDollarsToCents, parsePercent } from "../lib/money";
 import { useUrlFilters } from "../lib/useUrlFilters";
 import { ErrorState } from "./ErrorState";
+import { Check, Clock, Info } from "./icons";
 
 const pct = (rate: number) => `${Math.round(rate * 1000) / 10}%`;
 
@@ -169,7 +170,7 @@ function Card({ s }: { s: SetAside }) {
           </p>
           {(s.refund_adjustment_cents ?? 0) > 0 && (
             <p className="pill pill--info">
-              <span aria-hidden="true">ⓘ </span>
+              <Info />
               Includes a {formatCents(s.refund_adjustment_cents ?? 0)} refund for an earlier
               purchase, which raises this quarter's profit.
             </p>
@@ -192,9 +193,13 @@ function Card({ s }: { s: SetAside }) {
               {formatCents(s.set_aside_cents)} of {formatCents(s.estimate_cents)} set aside
             </span>
             {s.status === "on_track" ? (
-              <span className="pill pill--ok">On track</span>
+              <span className="pill pill--ok">
+                <Check /> On track
+              </span>
             ) : (
-              <span className="pill pill--behind">{formatCents(s.gap_cents)} behind</span>
+              <span className="pill pill--behind">
+                <Clock /> {formatCents(s.gap_cents)} behind
+              </span>
             )}
           </p>
 
