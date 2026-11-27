@@ -180,8 +180,8 @@ From `docs/process/03-execution-log.md` (UTC; T0 = 18:16:53Z):
 | Fidelity pass, scroll-to-table, final gates | 19:35 | 79 |
 | Final owner round: chevron fix, more handback CSS, gates | 19:42 | 85 |
 
-The build ran from 18:16:53Z to 19:42Z, **85 minutes**, inside the 90-minute box. Work kept
-going past the T+75 freeze because the owner asked for the handback, flagd and fidelity work
+The build ran from 18:16:53Z to 19:42Z, **85 minutes**, inside the 2-hour window (the plan targeted 90 minutes). Work kept
+going past the planned T+75 freeze because the owner asked for the handback, flagd and fidelity work
 after their test run. The owner's
 own time was in the Claude Design session and in answering 15 decision questions, in 4
 batches.

@@ -1,6 +1,6 @@
 # Build plan
 
-T0 = 2026-11-27T18:16:53Z. Box ends T+90 (19:46:53Z). Freeze at T+75 (19:31:53Z).
+T0 = 2026-11-27T18:16:53Z. Planned box T+90 (19:46:53Z), freeze at T+75 (19:31:53Z). (The owner's allowed window is 2 hours; the initial prompt planned for 90 minutes. Updated at T+88.) The window ends T+120 (20:16:53Z).
 Tiers set order, not a stopping point. Each stage ends with: `reviewer` on the diff → gates →
 scoped Conventional Commits → execution-log row → report to owner.
 
