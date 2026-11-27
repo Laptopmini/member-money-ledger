@@ -62,3 +62,20 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
 export function formatClock(iso: string): string {
   return clock.format(new Date(iso));
 }
+
+const dateTime = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** Time only when the timestamp is from today (local), otherwise date and time. */
+export function formatClockOrDate(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const same =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  return same ? clock.format(d) : dateTime.format(d);
+}

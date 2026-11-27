@@ -53,6 +53,8 @@ function Bars({ rows }: { rows: CategoryBreakdown[] }) {
   );
 }
 
+const signedPending = (c: number) => `${c < 0 ? "−" : "+"} ${formatCents(Math.abs(c))}`;
+
 export function Summary() {
   const { filters, setFilters } = useUrlFilters();
   const q = useSummary(filters.month);
@@ -80,6 +82,9 @@ export function Summary() {
     s.income_cents === 0 &&
     s.spend_cents === 0 &&
     s.pending_count === 0 &&
+    s.pending_cents === 0 &&
+    s.pending_income_cents === 0 &&
+    s.excluded_currency_count === 0 &&
     s.uncategorized_count === 0;
 
   if (empty) {
@@ -110,14 +115,22 @@ export function Summary() {
       <dl className="headline">
         <div className="headline__item">
           <dt>Income</dt>
-          <dd className="amount amount--credit">{formatCents(s.income_cents)}</dd>
+          <dd className="amount amount--credit">
+            {formatCents(s.income_cents)}
+            {s.pending_income_cents !== 0 && (
+              <span className="headline__pending">
+                {" "}
+                {signedPending(s.pending_income_cents)} pending
+              </span>
+            )}
+          </dd>
         </div>
         <div className="headline__item">
           <dt>Spend</dt>
           <dd className="amount">
             {formatCents(s.spend_cents)}
-            {s.pending_cents > 0 && (
-              <span className="headline__pending"> + {formatCents(s.pending_cents)} pending</span>
+            {s.pending_cents !== 0 && (
+              <span className="headline__pending"> {signedPending(s.pending_cents)} pending</span>
             )}
           </dd>
         </div>
@@ -154,7 +167,7 @@ export function Summary() {
         <button
           type="button"
           className="btn btn--nudge"
-          onClick={() => setFilters({ category: ["uncategorized"] })}
+          onClick={() => setFilters({ category: ["uncategorized"], from: "", to: "" })}
         >
           {s.uncategorized_count}{" "}
           {s.uncategorized_count === 1 ? "transaction needs" : "transactions need"} a category

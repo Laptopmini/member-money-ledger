@@ -1,5 +1,5 @@
 import { useRefresh, useSyncStatus } from "../api/queries";
-import { formatClock, formatRelative } from "../lib/dates";
+import { formatClockOrDate, formatRelative } from "../lib/dates";
 
 export function useVendorDown(): boolean {
   return useSyncStatus().data?.state === "vendor_down";
@@ -19,8 +19,8 @@ export function Banners() {
       {down && (
         <div className="banner banner--warning" role="status">
           We can't reach your bank feed right now.
-          {last ? ` Showing data from ${formatClock(last)}.` : ""} Changes can't be saved until it's
-          back.
+          {last ? ` Showing data from ${formatClockOrDate(last)}.` : ""} Changes can't be saved
+          until it's back.
         </div>
       )}
       {!down && data.stale && last && (
@@ -29,7 +29,7 @@ export function Banners() {
           <button
             type="button"
             className="btn btn--small"
-            disabled={refresh.isPending}
+            disabled={refresh.isPending || data.state === "running"}
             onClick={() => refresh.mutate()}
           >
             Refresh

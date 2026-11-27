@@ -24,26 +24,38 @@ function subscribe(cb: () => void) {
 
 const getSearch = () => window.location.search;
 
+function validMonth(v: string | null): string | null {
+  return v && /^\d{4}-(0[1-9]|1[0-2])$/.test(v) ? v : null;
+}
+
+function validDate(v: string | null): string {
+  const m = v ? /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(v) : null;
+  return m && v ? v : "";
+}
+
 export function parseFilters(search: string, now: Date = new Date()): Filters {
   const sp = new URLSearchParams(search);
   const status = sp.get("status");
   return {
-    month: /^\d{4}-\d{2}$/.test(sp.get("month") ?? "")
-      ? (sp.get("month") as string)
-      : currentMonth(now),
+    month: validMonth(sp.get("month")) ?? currentMonth(now),
     category: sp.getAll("category").filter(Boolean),
-    from: sp.get("from") ?? "",
-    to: sp.get("to") ?? "",
+    from: validDate(sp.get("from")),
+    to: validDate(sp.get("to")),
     status: status === "pending" || status === "posted" ? status : "",
     account: sp.get("account") ?? "",
     q: sp.get("q") ?? "",
   };
 }
 
-function write(next: Filters) {
+function write(next: Filters, pinMonth = false) {
   const sp = new URLSearchParams();
   // Month is only written once the user picks one; otherwise it follows the clock (ADR 0016).
-  if (next.month !== currentMonth()) sp.set("month", next.month);
+  if (
+    pinMonth ||
+    new URLSearchParams(window.location.search).has("month") ||
+    next.month !== currentMonth()
+  )
+    sp.set("month", next.month);
   for (const c of next.category) sp.append("category", c);
   for (const k of ["from", "to", "status", "account", "q"] as const) {
     if (next[k]) sp.set(k, next[k]);
@@ -59,7 +71,7 @@ export function useUrlFilters() {
   const filters = useMemo(() => parseFilters(search), [search]);
 
   const setFilters = useCallback((patch: Partial<Filters>) => {
-    write({ ...parseFilters(getSearch()), ...patch });
+    write({ ...parseFilters(getSearch()), ...patch }, "month" in patch);
   }, []);
 
   const clearFilters = useCallback(() => {

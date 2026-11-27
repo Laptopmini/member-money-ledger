@@ -1,6 +1,13 @@
 /* Placeholder tokens; replaced by the design handback. Keep every color here. */
 :root {
+  /* Contrast ratios (WCAG relative luminance):
+     light: amount-muted #4a5568 on surface #fff 7.53, on surface-2 6.59;
+            control-border #7b8594 on surface #fff 3.73, on bg #f6f6f3 3.45.
+     dark:  amount-muted #b4bcc9 on surface #171b21 9.03, on surface-2 7.75;
+            control-border #6b7686 on surface #171b21 3.75, on bg #0f1216 4.08. */
   color-scheme: light;
+  --color-amount-muted: #4a5568;
+  --color-control-border: #7b8594;
   --color-bg: #f6f6f3;
   --color-surface: #ffffff;
   --color-surface-2: #eef0f3;
@@ -48,6 +55,8 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
+  --color-amount-muted: #b4bcc9;
+  --color-control-border: #6b7686;
   --color-bg: #0f1216;
   --color-surface: #171b21;
   --color-surface-2: #222831;
@@ -81,6 +90,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
+    --color-amount-muted: #b4bcc9;
+    --color-control-border: #6b7686;
     --color-bg: #0f1216;
     --color-surface: #171b21;
     --color-surface-2: #222831;
