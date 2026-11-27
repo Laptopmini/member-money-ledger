@@ -40,3 +40,11 @@ describe("formatClockOrDate", () => {
     );
   });
 });
+
+describe("localToday", () => {
+  it("uses local parts, not UTC", async () => {
+    const { localToday } = await import("./dates");
+    expect(localToday(new Date(2026, 10, 27, 23, 30))).toBe("2026-11-27");
+    expect(localToday(new Date(2026, 0, 5, 0, 5))).toBe("2026-01-05");
+  });
+});

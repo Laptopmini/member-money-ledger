@@ -81,3 +81,20 @@ describe("apiFetch", () => {
     await expect(apiFetch("/api/x", { method: "POST" })).resolves.toBeNull();
   });
 });
+
+describe("csrf", () => {
+  it("re-fetches the csrf cookie once and retries on 403 csrf_failed", async () => {
+    document.cookie = "csrftoken=abc123";
+    let posts = 0;
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input) === "/api/auth/csrf") return json({});
+      posts++;
+      return posts === 1
+        ? json({ error: { code: "csrf_failed", message: "m", request_id: "r" } }, 403)
+        : json({ ok: true });
+    });
+    await expect(apiFetch("/api/x", { method: "POST" })).resolves.toEqual({ ok: true });
+    expect(posts).toBe(2);
+    expect(spy.mock.calls.filter((c) => String(c[0]) === "/api/auth/csrf")).toHaveLength(1);
+  });
+});
