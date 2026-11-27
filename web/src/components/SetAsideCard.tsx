@@ -4,6 +4,7 @@ import { useMarkSetAside, useSetAside, useSetRate } from "../api/tax";
 import type { SetAside } from "../api/types";
 import { formatLongDate, formatPostedOn, shortMonthName } from "../lib/dates";
 import { centsToDollarsInput, formatCents, parseDollarsToCents, parsePercent } from "../lib/money";
+import { goToTransactions } from "../lib/scroll";
 import { useUrlFilters } from "../lib/useUrlFilters";
 import { ErrorState } from "./ErrorState";
 import { Check, Clock, Info } from "./icons";
@@ -147,9 +148,10 @@ function Card({ s }: { s: SetAside }) {
           <button
             type="button"
             className="btn btn--nudge"
-            onClick={() =>
-              setFilters({ category: ["uncategorized"], from: s.period_start, to: s.period_end })
-            }
+            onClick={() => {
+              setFilters({ category: ["uncategorized"], from: s.period_start, to: s.period_end });
+              goToTransactions();
+            }}
           >
             Review deposits
           </button>
@@ -207,13 +209,14 @@ function Card({ s }: { s: SetAside }) {
             <button
               type="button"
               className="btn btn--nudge"
-              onClick={() =>
+              onClick={() => {
                 setFilters({
                   category: ["uncategorized"],
                   from: s.period_start,
                   to: s.period_end,
-                })
-              }
+                });
+                goToTransactions();
+              }}
             >
               Categorize {s.uncategorized_debit_count}{" "}
               {s.uncategorized_debit_count === 1 ? "transaction" : "transactions"}. Your estimate

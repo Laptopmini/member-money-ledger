@@ -4,6 +4,7 @@ import { useCategories, useRecategorize, useSuggestion, useTransactions } from "
 import type { Category, Transaction } from "../api/types";
 import { formatPostedOn, monthRange } from "../lib/dates";
 import { formatMinor } from "../lib/money";
+import { goToTransactions } from "../lib/scroll";
 import { useUrlFilters } from "../lib/useUrlFilters";
 import { useVendorDown, VENDOR_DOWN_REASON } from "./Banners";
 import { ErrorState } from "./ErrorState";
@@ -253,7 +254,14 @@ export function TransactionList() {
     body = hasFilters ? (
       <div className="state">
         <p className="state__title">No transactions match these filters</p>
-        <button type="button" className="btn" onClick={clearFilters}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            clearFilters();
+            goToTransactions();
+          }}
+        >
           Clear filters
         </button>
       </div>
@@ -263,7 +271,14 @@ export function TransactionList() {
           {explicit ? "No transactions in this date range" : "No transactions in this month"}
         </p>
         <p className="state__hint">Your transactions will appear after the first sync.</p>
-        <button type="button" className="btn" onClick={() => setFilters({ from: "", to: "" })}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            setFilters({ from: "", to: "" });
+            goToTransactions();
+          }}
+        >
           Reset dates
         </button>
       </div>
@@ -325,7 +340,7 @@ export function TransactionList() {
   }
 
   return (
-    <section className="card txns" aria-labelledby="txns-title">
+    <section id="transactions" className="card txns" aria-labelledby="txns-title">
       <h2 id="txns-title" className="card__title" tabIndex={-1}>
         Transactions
       </h2>

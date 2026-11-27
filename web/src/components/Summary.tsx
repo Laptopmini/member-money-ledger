@@ -2,6 +2,7 @@ import { useSummary } from "../api/queries";
 import type { CategoryBreakdown } from "../api/types";
 import { monthLabel, monthName } from "../lib/dates";
 import { formatCents } from "../lib/money";
+import { goToTransactions } from "../lib/scroll";
 import { useUrlFilters } from "../lib/useUrlFilters";
 import { ErrorState } from "./ErrorState";
 
@@ -23,7 +24,17 @@ function Bars({ rows }: { rows: CategoryBreakdown[] }) {
             : null;
         return (
           <li key={key} className="bars__row">
-            <span className="bars__label">{r.label}</span>
+            <span className="bars__label">
+              <span
+                className={`bars__dot${r.category === null ? " bars__dot--uncategorized" : ""}`}
+                style={{ "--cat": `var(--cat-${(i % 8) + 1})` } as React.CSSProperties}
+                aria-hidden="true"
+              />
+              <span className="bars__name">{r.label}</span>
+              <span className="bars__count">
+                {r.count} {r.count === 1 ? "transaction" : "transactions"}
+              </span>
+            </span>
             <span
               className={`bars__track${hasNegative ? " bars__track--split" : ""}`}
               aria-hidden="true"
@@ -98,7 +109,10 @@ export function Summary() {
             <button
               type="button"
               className="btn"
-              onClick={() => setFilters({ month: latest, from: "", to: "" })}
+              onClick={() => {
+                setFilters({ month: latest, from: "", to: "" });
+                goToTransactions();
+              }}
             >
               Jump to {monthLabel(latest)}
             </button>
@@ -111,11 +125,13 @@ export function Summary() {
   const ucc = s.uncategorized_credit_count;
   return (
     <section className="card summary" aria-label={`Summary for ${monthLabel(s.month)}`}>
-      <h2 className="card__title">Summary</h2>
+      <h2 className="card__title">{monthLabel(s.month)}</h2>
+      <p className="card__subtitle">Posted transactions. Pending ones are shown, not counted.</p>
       <dl className="headline">
         <div className="headline__item">
           <dt>Income</dt>
           <dd className="amount amount--credit">
+            {s.income_cents > 0 ? "+" : ""}
             {formatCents(s.income_cents)}
             {s.pending_income_cents !== 0 && (
               <span className="headline__pending">
@@ -128,6 +144,7 @@ export function Summary() {
         <div className="headline__item">
           <dt>Spend</dt>
           <dd className="amount">
+            {s.spend_cents > 0 ? "−" : ""}
             {formatCents(s.spend_cents)}
             {s.pending_cents !== 0 && (
               <span className="headline__pending"> {signedPending(s.pending_cents)} pending</span>
@@ -142,7 +159,15 @@ export function Summary() {
         </div>
       </dl>
 
-      {s.by_category.length > 0 && <Bars rows={s.by_category} />}
+      {s.by_category.length > 0 && (
+        <>
+          <div className="bars__head">
+            <h3 className="bars__title">Spend by category</h3>
+            <span className="bars__subtitle">Share of spend</span>
+          </div>
+          <Bars rows={s.by_category} />
+        </>
+      )}
 
       {(ucc > 0 || s.excluded_currency_count > 0) && (
         <ul className="flags">
@@ -167,7 +192,10 @@ export function Summary() {
         <button
           type="button"
           className="btn btn--nudge"
-          onClick={() => setFilters({ category: ["uncategorized"], from: "", to: "" })}
+          onClick={() => {
+            setFilters({ category: ["uncategorized"], from: "", to: "" });
+            goToTransactions();
+          }}
         >
           {s.uncategorized_count}{" "}
           {s.uncategorized_count === 1 ? "transaction needs" : "transactions need"} a category

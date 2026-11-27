@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCategories } from "../api/queries";
+import { goToTransactions } from "../lib/scroll";
 import { useUrlFilters } from "../lib/useUrlFilters";
 
 export function Filters({ count, hasMore }: { count: number | null; hasMore: boolean }) {
@@ -153,7 +154,14 @@ export function Filters({ count, hasMore }: { count: number | null; hasMore: boo
               : `${count}${hasMore ? "+" : ""} ${count === 1 && !hasMore ? "transaction" : "transactions"}`}
           </span>
           {hasFilters && (
-            <button type="button" className="btn btn--ghost btn--small" onClick={clearFilters}>
+            <button
+              type="button"
+              className="btn btn--ghost btn--small"
+              onClick={() => {
+                clearFilters();
+                goToTransactions();
+              }}
+            >
               Clear filters
             </button>
           )}
