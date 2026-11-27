@@ -154,6 +154,7 @@ describe("list errors", () => {
       const url = String(input);
       if (url.startsWith("/api/categories")) return jsonResponse(CATEGORIES);
       if (url.startsWith("/api/sync/status")) return jsonResponse(SYNC);
+      if (url.startsWith("/api/flags")) return jsonResponse({}, 404);
       calls++;
       if (calls === 1) return jsonResponse({ results: [txn()], next_cursor: "c", synced_at: null });
       return jsonResponse({ error: { code: "x", message: "m", request_id: "r" } }, 500);
