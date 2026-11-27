@@ -9,6 +9,13 @@ from ledger import flags, tax
 from ledger.models import AuditEvent, SetAsideMark, Transaction
 
 
+@pytest.fixture(autouse=True)
+def _frozen_today(monkeypatch):
+    from ledger import tax_views
+
+    monkeypatch.setattr(tax_views, "server_today", lambda: date(2026, 11, 27))
+
+
 def row(category, direction, total, status="posted", currency="USD", n=1):
     return {
         "category": category,
@@ -86,13 +93,66 @@ def test_personal_unknown_uncategorized_count_zero():
     assert out["deductible_cents"] == 0
 
 
-def test_uncategorized_reduction_includes_pending():
+def test_uncategorized_reduction_posted_only_and_capped():
     out = compute(
-        [row("income", "credit", 850000), row(None, "debit", 31275, status="pending", n=1)]
+        [
+            row("income", "credit", 850000),
+            row(None, "debit", 31275, n=1),
+            row(None, "debit", 9999, status="pending", n=2),
+        ]
     )
-    assert out["uncategorized_debit_count"] == 1
-    assert out["uncategorized_debit_cents"] == 31275
+    assert out["uncategorized_debit_count"] == 1 and out["uncategorized_debit_cents"] == 31275
+    assert out["pending_uncategorized_debit_count"] == 2
     assert out["potential_reduction_cents"] == 7819
+    # capped at the estimate: tiny income, big uncategorized spend
+    small = compute([row("income", "credit", 1000), row(None, "debit", 500000)])
+    assert small["potential_reduction_cents"] == small["estimate_cents"] == 250
+
+
+def test_cross_category_netting_and_refund_adjustment():
+    out = compute(
+        [
+            row("income", "credit", 100000),
+            row("meals", "debit", 10000),
+            row("software", "credit", 4000),  # refund for an earlier quarter's purchase
+        ]
+    )
+    # meals +5000, software -4000 netted: deduction 1000; the refund raised profit by 4000
+    assert out["deductible_cents"] == 1000 and out["refund_adjustment_cents"] == 4000
+    assert out["profit_cents"] == 99000
+    only_refund = compute([row("income", "credit", 100000), row("software", "credit", 4000)])
+    assert only_refund["deductible_cents"] == 0  # total clamped at >= 0
+    assert only_refund["refund_adjustment_cents"] == 4000
+    assert compute([row("income", "credit", 100000)])["refund_adjustment_cents"] == 0
+
+
+@pytest.mark.parametrize(
+    ("today", "label", "current"),
+    [
+        (date(2027, 1, 10), "2026-Q4", False),
+        (date(2027, 1, 16), "2027-Q1", True),
+        (date(2026, 6, 10), "2026-Q2", False),
+        (date(2026, 9, 10), "2026-Q3", False),
+        (date(2026, 11, 27), "2026-Q4", True),
+    ],
+)
+def test_default_period(today, label, current):
+    p = tax.default_period(today)
+    assert p.label == label
+    out = tax.compute_set_aside(
+        [], rate=Decimal("0.25"), set_aside_cents=0, the_period=p, today=today
+    )
+    assert out["is_current_period"] is current
+
+
+@pytest.mark.django_db
+def test_today_param_must_be_near_server_date():
+    api = APIClient()
+    assert api.get("/api/tax/set-aside?today=2026-11-28").status_code == 200
+    assert api.get("/api/tax/set-aside?today=2026-11-26").status_code == 200
+    r = api.get("/api/tax/set-aside?today=2026-12-05")
+    assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_date"
+    assert api.get("/api/tax/set-aside").json()["quarter"] == "2026-Q4"
 
 
 def test_chargeback_nets_income_and_non_usd_ignored():
