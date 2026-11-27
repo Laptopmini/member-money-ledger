@@ -13,3 +13,12 @@ describe("formatCents", () => {
     expect(formatCents(-2400, { signDisplay: "always" })).toBe("-$24.00");
   });
 });
+
+describe("formatMinor", () => {
+  it("uses the currency's own fraction digits", async () => {
+    const { formatMinor } = await import("./money");
+    expect(formatMinor(1234, "EUR")).toBe("€12.34");
+    expect(formatMinor(1234, "JPY")).toBe("¥1,234");
+    expect(formatMinor(4599, "USD")).toBe("$45.99");
+  });
+});

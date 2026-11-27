@@ -3,10 +3,13 @@ import { ApiError, apiFetch, markInteraction } from "./client";
 
 afterEach(() => vi.restoreAllMocks());
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
 describe("apiFetch", () => {
   it("sends the activity header only when asked, and CSRF on unsafe methods", async () => {
     document.cookie = "csrftoken=abc123";
-    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}"));
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => json({}));
     markInteraction(Number.NEGATIVE_INFINITY);
     await apiFetch("/api/x");
     await apiFetch("/api/x", { method: "POST", userActivity: true });
@@ -19,7 +22,7 @@ describe("apiFetch", () => {
   });
 
   it("sends the activity header only after real input in the last 60s", async () => {
-    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}"));
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => json({}));
     const header = (i: number) =>
       (spy.mock.calls[i][1]?.headers as Record<string, string> | undefined)?.["X-User-Activity"];
     markInteraction(Date.now() - 120_000);
@@ -36,7 +39,7 @@ describe("apiFetch", () => {
   });
 
   it("always sends a JSON content type and body on unsafe methods (API returns 415 otherwise)", async () => {
-    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}"));
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => json({}));
     await apiFetch("/api/sync", { method: "POST", userActivity: true });
     const init = spy.mock.calls[0][1];
     expect((init?.headers as Record<string, string> | undefined)?.["Content-Type"]).toBe(
@@ -60,5 +63,21 @@ describe("apiFetch", () => {
       message: "m",
     });
     await expect(apiFetch("/api/x")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("throws bad_response for a 2xx that is not JSON, and treats 204 as null", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response("<html>", { status: 200, headers: { "Content-Type": "text/html" } }),
+    );
+    await expect(apiFetch("/api/x")).rejects.toMatchObject({ status: 200, code: "bad_response" });
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response("{oops", { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+    await expect(apiFetch("/api/x")).rejects.toMatchObject({ code: "bad_response" });
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(null, { status: 204 }),
+    );
+    await expect(apiFetch("/api/x", { method: "POST" })).resolves.toBeNull();
   });
 });

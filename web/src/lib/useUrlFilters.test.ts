@@ -38,3 +38,19 @@ describe("useUrlFilters", () => {
     expect(result.current.filters.from).toBe("2026-10-01");
   });
 });
+
+describe("useUrlFilters validation and month pinning", () => {
+  it("ignores invalid month and dates", () => {
+    window.history.replaceState(null, "", "/?month=2026-13&from=2026-1-1&to=2026-10-32");
+    const { result } = renderHook(() => useUrlFilters());
+    expect(result.current.filters.month).toBe(currentMonth());
+    expect(result.current.filters.from).toBe("");
+    expect(result.current.filters.to).toBe("");
+  });
+
+  it("keeps month in the URL once the user navigated, even if it is the current month", () => {
+    const { result } = renderHook(() => useUrlFilters());
+    act(() => result.current.setFilters({ month: currentMonth() }));
+    expect(window.location.search).toBe(`?month=${currentMonth()}`);
+  });
+});

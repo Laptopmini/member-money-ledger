@@ -29,3 +29,14 @@ describe("dates", () => {
     expect(monthRange("2026-04").to).toBe("2026-04-30");
   });
 });
+
+describe("formatClockOrDate", () => {
+  it("shows only the time for today and the date otherwise", async () => {
+    const { formatClockOrDate } = await import("./dates");
+    const now = new Date(2026, 10, 27, 15, 0);
+    expect(formatClockOrDate(new Date(2026, 10, 27, 10, 42).toISOString(), now)).toBe("10:42 AM");
+    expect(formatClockOrDate(new Date(2026, 10, 26, 10, 42).toISOString(), now)).toBe(
+      "Nov 26, 10:42 AM",
+    );
+  });
+});
