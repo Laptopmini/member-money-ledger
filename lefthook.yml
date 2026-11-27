@@ -1,0 +1,38 @@
+# Git hooks (lefthook). Install once with: npx lefthook install
+# pre-commit lint steps run inside the containers and are skipped, with a message, if the
+# container is not running. Staged paths are mapped to the container's /app mount.
+
+pre-commit:
+  parallel: true
+  commands:
+    ruff-check:
+      glob: "api/**/*.py"
+      run: |
+        if [ -z "$(docker compose ps -q --status running api)" ]; then echo "skip ruff: api container not running"; exit 0; fi
+        files=$(echo {staged_files} | tr ' ' '\n' | sed 's#^api/##' | tr '\n' ' ')
+        docker compose exec -T api ruff check $files && docker compose exec -T api ruff format --check $files
+    biome-check:
+      glob: "web/**/*.{ts,tsx,js,mjs,json}"
+      run: |
+        if [ -z "$(docker compose ps -q --status running web)" ]; then echo "skip biome: web container not running"; exit 0; fi
+        files=$(echo {staged_files} | tr ' ' '\n' | sed 's#^web/##' | tr '\n' ' ')
+        docker compose exec -T web npx biome check $files
+    tsc-web:
+      glob: "web/**/*.{ts,tsx}"
+      run: |
+        if [ -z "$(docker compose ps -q --status running web)" ]; then echo "skip tsc: web container not running"; exit 0; fi
+        docker compose exec -T web npx tsc --noEmit
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx --no -- commitlint --edit {1}
+
+pre-push:
+  commands:
+    test:
+      run: make test
+    typecheck:
+      run: make typecheck
+    audit:
+      run: make audit

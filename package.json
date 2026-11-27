@@ -1,0 +1,10 @@
+{
+  "name": "member-money-ledger",
+  "private": true,
+  "description": "Root tooling only (git hooks and commit linting). App code lives in api/ and web/.",
+  "devDependencies": {
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "lefthook": "2.2.4"
+  }
+}
