@@ -138,11 +138,10 @@ See `docs/security.md` for the threat model.
 
 ## Stretch goals / TODO
 
-- [x] Claude Design handback applied: tokens, icons and visual layer (`docs/design/handback/`).
-  Still to do from it: the container-query app shell, the transaction **detail drawer** with
-  audit history (the API exists: `/api/transactions/{id}/history`), the account menu, the
-  icon-only Refresh with sync dots, the mobile filter sheet, and the inline rule prompt under
-  the row
+- [x] Claude Design handback: tokens, icons, visual layer, transaction detail drawer with audit
+  history, account menu (theme + sign out), icon Refresh with sync-state dot, and a fidelity pass
+  against the mockups. Still to do: the mobile filter sheet, the drawer's radio-grid category
+  picker and editable description, and a `?txn=` deep link to the drawer
 - [x] Merchant rules (`merchant-rules`, off by default): turn it on in `flags/flags.json` to demo
 - [x] AI category suggestions (`category-suggestions` plus `LLM_BASE_URL`/`LLM_MODEL`): built and
   unit-tested. **The local eval is still to run.** LM Studio wasn't serving during the build,
