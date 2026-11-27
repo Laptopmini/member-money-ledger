@@ -172,7 +172,8 @@ class SetAsideMark(models.Model):
 
     member = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     quarter = models.CharField(max_length=7, db_index=True)  # "2026-Q4"
-    amount_cents = models.BigIntegerField()
+    amount_cents = models.BigIntegerField()  # negative = reversal
+    reason = models.CharField(max_length=200, blank=True, default="")
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self) -> str:

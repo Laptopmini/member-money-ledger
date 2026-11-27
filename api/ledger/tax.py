@@ -82,7 +82,7 @@ def compute_set_aside(
     total (sum of positive cents) and n. Non-USD rows are ignored everywhere."""
     income = 0
     net_by_cat: dict[str, int] = {}
-    unc_n = unc_cents = 0
+    unc_n = unc_cents = unc_credit_n = unc_credit_cents = 0
     for r in rows:
         if r["currency"] != "USD":
             continue
@@ -90,6 +90,9 @@ def compute_set_aside(
         if cat is None and direction == "debit":
             unc_n += n  # pending included: it will post
             unc_cents += total
+        if cat is None and direction == "credit":
+            unc_credit_n += n  # not income, not a refund: the member must review it
+            unc_credit_cents += total
         if r["status"] != "posted":
             continue
         kind = classify(cat, direction, r["currency"])
@@ -110,8 +113,8 @@ def compute_set_aside(
     profit = max(0, income - deductible_cents)
     estimate = round_half_up(Decimal(profit) * rate)
     gap = max(0, estimate - set_aside_cents)
-    if income == 0:
-        status = "no_income"
+    if income <= 0:
+        status = "needs_review" if unc_credit_n else "no_income"
     elif gap == 0:
         status = "on_track"
     else:
@@ -130,6 +133,8 @@ def compute_set_aside(
         "set_aside_cents": set_aside_cents,
         "gap_cents": gap,
         "status": status,
+        "uncategorized_credit_count": unc_credit_n,
+        "uncategorized_credit_cents": unc_credit_cents,
         "uncategorized_debit_count": unc_n,
         "uncategorized_debit_cents": unc_cents,
         # "about": assumes the uncategorized debits are fully deductible

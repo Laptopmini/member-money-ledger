@@ -13,7 +13,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - auth
       security:
@@ -31,7 +31,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - auth
       requestBody:
@@ -71,7 +71,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - auth
       security:
@@ -89,7 +89,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - auth
       security:
@@ -116,7 +116,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - categories
       security:
@@ -154,7 +154,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - health
       security:
@@ -182,7 +182,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       parameters:
       - in: query
         name: month
@@ -218,7 +218,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - sync
       security:
@@ -251,7 +251,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - sync
       security:
@@ -272,7 +272,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       parameters:
       - in: query
         name: quarter
@@ -316,7 +316,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - tax
       requestBody:
@@ -355,7 +355,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       tags:
       - tax
       requestBody:
@@ -388,7 +388,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       parameters:
       - in: query
         name: account
@@ -458,7 +458,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       parameters:
       - in: path
         name: txn_id
@@ -490,7 +490,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       parameters:
       - in: path
         name: txn_id
@@ -546,7 +546,7 @@ paths:
 
         Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
         Mutating requests must be application/json: a cross-site form POST cannot send that
-        without a CORS preflight (CSRF mitigation until session auth lands).
+        without a CORS preflight (defence in depth next to the CSRF token).
       parameters:
       - in: path
         name: txn_id
@@ -833,6 +833,10 @@ components:
           type: integer
         status:
           $ref: '#/components/schemas/SetAsideStatusEnum'
+        uncategorized_credit_count:
+          type: integer
+        uncategorized_credit_cents:
+          type: integer
         uncategorized_debit_count:
           type: integer
         uncategorized_debit_cents:
@@ -857,6 +861,8 @@ components:
       - rate
       - set_aside_cents
       - status
+      - uncategorized_credit_cents
+      - uncategorized_credit_count
       - uncategorized_debit_cents
       - uncategorized_debit_count
     SetAsideMark:
@@ -886,8 +892,11 @@ components:
         amount_cents:
           type: integer
           maximum: 1000000000000
-          minimum: 1
+          minimum: -1000000000000
           format: int64
+        reason:
+          type: string
+          maxLength: 200
       required:
       - amount_cents
       - quarter
@@ -896,11 +905,13 @@ components:
       - on_track
       - behind
       - no_income
+      - needs_review
       type: string
       description: |-
         * `on_track` - on_track
         * `behind` - behind
         * `no_income` - no_income
+        * `needs_review` - needs_review
     Summary:
       type: object
       properties:

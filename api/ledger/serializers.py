@@ -182,7 +182,7 @@ FlagsSerializer = type(
 )
 
 
-SET_ASIDE_STATUS_CHOICES = [(k, k) for k in ("on_track", "behind", "no_income")]
+SET_ASIDE_STATUS_CHOICES = [(k, k) for k in ("on_track", "behind", "no_income", "needs_review")]
 
 
 class SetAsideSerializer(serializers.Serializer[Any]):
@@ -199,6 +199,8 @@ class SetAsideSerializer(serializers.Serializer[Any]):
     set_aside_cents = serializers.IntegerField()
     gap_cents = serializers.IntegerField()
     status = serializers.ChoiceField(choices=SET_ASIDE_STATUS_CHOICES)
+    uncategorized_credit_count = serializers.IntegerField()
+    uncategorized_credit_cents = serializers.IntegerField()
     uncategorized_debit_count = serializers.IntegerField()
     uncategorized_debit_cents = serializers.IntegerField()
     potential_reduction_cents = serializers.IntegerField()
@@ -217,7 +219,19 @@ class TaxSettingsResponseSerializer(serializers.Serializer[Any]):
 
 class SetAsideMarkRequestSerializer(serializers.Serializer[Any]):
     quarter = serializers.CharField(max_length=7)
-    amount_cents = serializers.IntegerField(min_value=1, max_value=10**12)
+    # Negative = reversal (needs a reason); the running total can never go below zero.
+    amount_cents = serializers.IntegerField(min_value=-(10**12), max_value=10**12)
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+    def validate_amount_cents(self, value: int) -> int:
+        if value == 0:
+            raise serializers.ValidationError("amount must not be zero")
+        return value
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if attrs["amount_cents"] < 0 and not attrs.get("reason", "").strip():
+            raise serializers.ValidationError("a reversal needs a reason")
+        return attrs
 
 
 class SetAsideMarkSerializer(serializers.Serializer[Any]):

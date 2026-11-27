@@ -23,7 +23,7 @@ from .serializers import (
     TaxSettingsResponseSerializer,
     TaxSettingsSerializer,
 )
-from .views import DATE_RE, LedgerView
+from .views import DATE_RE, LedgerView, actor_label
 
 
 def require_flag() -> None:
@@ -36,11 +36,21 @@ def _rate_for(member: Any) -> Decimal:
     return row.rate if row else tax.DEFAULT_RATE
 
 
-def _quarter(value: str) -> tax.Period:
+def _quarter(value: str, today: date) -> tax.Period:
     try:
-        return tax.parse_quarter(value)
+        parsed = tax.parse_quarter(value)
     except ValueError:
         raise ApiError(400, "invalid_quarter", "quarter must look like 2026-Q4.") from None
+    if abs(parsed.year - today.year) > 1:
+        raise ApiError(400, "invalid_quarter", "That quarter is out of range.")
+    return parsed
+
+
+def require_member(request: Request) -> Any:
+    member = member_for(request)
+    if member is None:
+        raise ApiError(503, "no_member", "No member account is set up.")
+    return member
 
 
 def _marks_total(member: Any, quarter: str) -> int:
@@ -70,8 +80,8 @@ class SetAsideView(LedgerView):
                 today = date.fromisoformat(qp["today"])
             except ValueError:
                 raise ApiError(400, "invalid_date", "today must be a real date.") from None
-        the_period = _quarter(qp["quarter"]) if qp.get("quarter") else tax.period_for(today)
-        member = member_for(request)
+        the_period = _quarter(qp["quarter"], today) if qp.get("quarter") else tax.period_for(today)
+        member = require_member(request)
 
         rows = (
             Transaction.objects.for_member(request.user)
@@ -103,16 +113,18 @@ class TaxSettingsView(LedgerView):
         except serializers.ValidationError:
             raise ApiError(400, "invalid_rate", "Rate must be between 0% and 60%.") from None
         rate: Decimal = ser.validated_data["rate"]
-        member = member_for(request)
+        if rate == 0:
+            rate = Decimal(0)  # normalise "-0"
+        member = require_member(request)
         with transaction.atomic():
             row, _ = TaxSettings.objects.get_or_create(member=member)
             before = float(row.rate)
             row.rate = rate
             row.save()
             AuditEvent.objects.create(
-                actor=str(member.email or "member")[:32],
+                actor=actor_label(request),
                 action="tax_rate_changed",
-                txn_id="",
+                txn_id="tax",
                 before={"rate": before},
                 after={"rate": float(rate)},
                 request_id=request_id_of(request),
@@ -133,19 +145,27 @@ class SetAsideMarkView(LedgerView):
         try:
             ser.is_valid(raise_exception=True)
         except serializers.ValidationError:
-            raise ApiError(400, "invalid_amount", "Enter an amount above zero.") from None
-        quarter = _quarter(ser.validated_data["quarter"]).label
-        member = member_for(request)
+            raise ApiError(
+                400, "invalid_amount", "Enter a non-zero amount (reversals need a reason)."
+            ) from None
+        quarter = _quarter(ser.validated_data["quarter"], date.today()).label
+        member = require_member(request)
+        amount = ser.validated_data["amount_cents"]
+        reason = ser.validated_data.get("reason", "").strip()
         with transaction.atomic():
+            # Serialize marks per member so two reversals can't both pass the floor check.
+            type(member).objects.select_for_update().get(pk=member.pk)
+            if _marks_total(member, quarter) + amount < 0:
+                raise ApiError(400, "invalid_amount", "That would put the total below zero.")
             mark = SetAsideMark.objects.create(
-                member=member, quarter=quarter, amount_cents=ser.validated_data["amount_cents"]
+                member=member, quarter=quarter, amount_cents=amount, reason=reason
             )
             # The success event: txn_id carries the quarter for this non-transaction action.
             AuditEvent.objects.create(
-                actor=str(member.email or "member")[:32],
+                actor=actor_label(request),
                 action="set_aside_marked",
-                txn_id=quarter,
-                after={"quarter": quarter, "amount_cents": mark.amount_cents},
+                txn_id=f"q:{quarter}",
+                after={"quarter": quarter, "amount_cents": mark.amount_cents, "reason": reason},
                 request_id=request_id_of(request),
                 ip=client_ip(request),
             )
