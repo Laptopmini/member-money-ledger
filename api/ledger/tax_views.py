@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -24,6 +24,10 @@ from .serializers import (
     TaxSettingsSerializer,
 )
 from .views import DATE_RE, LedgerView, actor_label
+
+
+def server_today() -> date:
+    return datetime.now(UTC).date()
 
 
 def require_flag() -> None:
@@ -72,7 +76,8 @@ class SetAsideView(LedgerView):
     def get(self, request: Request) -> Response:
         require_flag()
         qp = request.query_params
-        today = date.today()
+        today = server_today()
+        server_day = today
         if qp.get("today"):
             if not DATE_RE.match(qp["today"]):
                 raise ApiError(400, "invalid_date", "today must be YYYY-MM-DD.")
@@ -80,7 +85,12 @@ class SetAsideView(LedgerView):
                 today = date.fromisoformat(qp["today"])
             except ValueError:
                 raise ApiError(400, "invalid_date", "today must be a real date.") from None
-        the_period = _quarter(qp["quarter"], today) if qp.get("quarter") else tax.period_for(today)
+            # The browser supplies the member's local date; it can differ from UTC by one day.
+            if abs((today - server_day).days) > 1:
+                raise ApiError(400, "invalid_date", "today is too far from the server date.")
+        the_period = (
+            _quarter(qp["quarter"], today) if qp.get("quarter") else tax.default_period(today)
+        )
         member = require_member(request)
 
         rows = (
@@ -148,7 +158,7 @@ class SetAsideMarkView(LedgerView):
             raise ApiError(
                 400, "invalid_amount", "Enter a non-zero amount (reversals need a reason)."
             ) from None
-        quarter = _quarter(ser.validated_data["quarter"], date.today()).label
+        quarter = _quarter(ser.validated_data["quarter"], server_today()).label
         member = require_member(request)
         amount = ser.validated_data["amount_cents"]
         reason = ser.validated_data.get("reason", "").strip()

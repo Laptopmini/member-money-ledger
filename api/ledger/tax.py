@@ -55,6 +55,15 @@ def period_for(day: date) -> Period:
     raise AssertionError("unreachable")  # pragma: no cover
 
 
+def default_period(today: date) -> Period:
+    """The earliest period whose payment is still due: after a quarter ends, its estimate stays
+    the one to act on until its due date (2027-01-10 -> 2026-Q4; 2027-01-16 -> 2027-Q1)."""
+    candidates = [
+        period(y, n) for y in (today.year - 1, today.year, today.year + 1) for n in range(1, 5)
+    ]
+    return next(p for p in sorted(candidates, key=lambda p: p.start) if p.due_on >= today)
+
+
 def parse_quarter(value: str) -> Period:
     m = QUARTER_RE.match(value)
     if not m:
@@ -82,14 +91,17 @@ def compute_set_aside(
     total (sum of positive cents) and n. Non-USD rows are ignored everywhere."""
     income = 0
     net_by_cat: dict[str, int] = {}
-    unc_n = unc_cents = unc_credit_n = unc_credit_cents = 0
+    unc_n = unc_cents = unc_pending_n = unc_credit_n = unc_credit_cents = 0
     for r in rows:
         if r["currency"] != "USD":
             continue
         cat, direction, total, n = r["category"], r["direction"], int(r["total"]), r["n"]
         if cat is None and direction == "debit":
-            unc_n += n  # pending included: it will post
-            unc_cents += total
+            if r["status"] == "posted":
+                unc_n += n
+                unc_cents += total
+            else:
+                unc_pending_n += n  # reported separately; not part of the incentive
         if cat is None and direction == "credit":
             unc_credit_n += n  # not income, not a refund: the member must review it
             unc_credit_cents += total
@@ -102,13 +114,21 @@ def compute_set_aside(
         elif kind in ("spend", "refund") and cat is not None:
             net_by_cat[cat] = net_by_cat.get(cat, 0) - signed
 
+    # Net across categories; only the period TOTAL is clamped at >= 0. A category whose refunds
+    # exceed its charges (a refund for an earlier period's purchase) lowers the deduction, which
+    # raises profit: `refund_adjustment_cents` reports that effect so the member can see it.
     deductible = Decimal(0)
+    adjustment = Decimal(0)
     for cat, net in net_by_cat.items():
         known = CATEGORIES.get(cat)
         if known is None or known.kind != "expense":
             continue  # unknown synced categories and personal count 0
-        deductible += Decimal(max(0, net)) * known.deductible_fraction
-    deductible_cents = round_half_up(deductible)
+        amount = Decimal(net) * known.deductible_fraction
+        deductible += amount
+        if net < 0:
+            adjustment -= amount
+    deductible_cents = round_half_up(max(Decimal(0), deductible))
+    refund_adjustment_cents = round_half_up(adjustment)
 
     profit = max(0, income - deductible_cents)
     estimate = round_half_up(Decimal(profit) * rate)
@@ -126,8 +146,10 @@ def compute_set_aside(
         "due_on": the_period.due_on.isoformat(),
         "days_until_due": (the_period.due_on - today).days,
         "rate": float(rate),
+        "is_current_period": the_period.start <= today <= the_period.end,
         "income_cents": income,
         "deductible_cents": deductible_cents,
+        "refund_adjustment_cents": refund_adjustment_cents,
         "profit_cents": profit,
         "estimate_cents": estimate,
         "set_aside_cents": set_aside_cents,
@@ -135,9 +157,10 @@ def compute_set_aside(
         "status": status,
         "uncategorized_credit_count": unc_credit_n,
         "uncategorized_credit_cents": unc_credit_cents,
+        "pending_uncategorized_debit_count": unc_pending_n,
         "uncategorized_debit_count": unc_n,
         "uncategorized_debit_cents": unc_cents,
         # "about": assumes the uncategorized debits are fully deductible
-        "potential_reduction_cents": round_half_up(Decimal(unc_cents) * rate),
+        "potential_reduction_cents": min(estimate, round_half_up(Decimal(unc_cents) * rate)),
         "disclaimer": DISCLAIMER,
     }

@@ -819,9 +819,13 @@ components:
         rate:
           type: number
           format: double
+        is_current_period:
+          type: boolean
         income_cents:
           type: integer
         deductible_cents:
+          type: integer
+        refund_adjustment_cents:
           type: integer
         profit_cents:
           type: integer
@@ -836,6 +840,8 @@ components:
         uncategorized_credit_count:
           type: integer
         uncategorized_credit_cents:
+          type: integer
+        pending_uncategorized_debit_count:
           type: integer
         uncategorized_debit_count:
           type: integer
@@ -853,12 +859,15 @@ components:
       - estimate_cents
       - gap_cents
       - income_cents
+      - is_current_period
+      - pending_uncategorized_debit_count
       - period_end
       - period_start
       - potential_reduction_cents
       - profit_cents
       - quarter
       - rate
+      - refund_adjustment_cents
       - set_aside_cents
       - status
       - uncategorized_credit_cents
