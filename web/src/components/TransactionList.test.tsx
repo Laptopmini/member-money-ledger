@@ -97,10 +97,8 @@ describe("TransactionList", () => {
     const select = await screen.findByRole("combobox", { name: "Category for Delta Air Lines" });
     await screen.findByRole("option", { name: "Travel" });
     await userEvent.selectOptions(select, "travel");
-    const alert = await screen.findByRole("alert");
-    expect(
-      within(alert).getByText(/This transaction changed in your bank feed/),
-    ).toBeInTheDocument();
+    const note = await screen.findByText(/This transaction changed in your bank feed/);
+    expect(note.closest(".inline-note--stale")).toHaveAttribute("role", "alert");
     await waitFor(() => expect(select).toHaveValue(""));
   });
 

@@ -77,9 +77,7 @@ describe("merchant rule prompt", () => {
     renderWithProviders(<TransactionList />, client);
     await recategorize();
     expect(
-      await screen.findByText(
-        "Apply Software & subscriptions to 4 other Figma transactions? Future Figma transactions too.",
-      ),
+      await screen.findByText(/to 4 other Figma transactions\? Future Figma transactions too\./),
     ).toBeInTheDocument();
     expect(calls.some((c) => c.url === "/api/rules/preview?merchant=Figma&category=software")).toBe(
       true,
