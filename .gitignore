@@ -16,3 +16,4 @@ web/e2e/.auth/
 web/test-results/
 web/playwright-report/
 *.bak
+.DS_Store
