@@ -469,6 +469,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transactions/{txn_id}/suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        get: operations["getTransactionSuggestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -647,6 +671,19 @@ export interface components {
          * @enum {string}
          */
         SetAsideStatusEnum: "on_track" | "behind" | "no_income" | "needs_review";
+        /**
+         * @description * `rule` - rule
+         *     * `cache` - cache
+         *     * `model` - model
+         * @enum {string}
+         */
+        SourceEnum: "rule" | "cache" | "model";
+        Suggestion: {
+            category: string | null;
+            label?: string;
+            source?: components["schemas"]["SourceEnum"];
+            model?: string | null;
+        };
         Summary: {
             month: string;
             income_cents: number;
@@ -1398,6 +1435,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["History"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getTransactionSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                txn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
                 };
             };
             404: {
