@@ -29,3 +29,30 @@ export function formatMinor(amount: number, currency: string): string {
   const digits = fmt.resolvedOptions().maximumFractionDigits ?? 2;
   return fmt.format(amount / 10 ** digits);
 }
+
+/**
+ * "1,234.56" -> 123456. String math only (no parseFloat * 100). Returns null for anything
+ * that isn't a non-negative amount with at most 2 decimals.
+ */
+export function parseDollarsToCents(input: string): number | null {
+  const m = /^\$?\s*((?:\d{1,3}(?:,\d{3})+|\d+)?)(?:\.(\d{1,2}))?$/.exec(input.trim());
+  if (!m || (m[1] === "" && m[2] === undefined)) return null;
+  const whole = Number((m[1] ?? "").replace(/,/g, "") || "0");
+  const frac = Number((m[2] ?? "").padEnd(2, "0") || "0");
+  const cents = whole * 100 + frac;
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+/** Cents to an editable dollars string ("90325" -> "903.25"), string math only. */
+export function centsToDollarsInput(cents: number): string {
+  const c = Math.max(0, Math.trunc(cents));
+  return `${Math.floor(c / 100)}.${String(c % 100).padStart(2, "0")}`;
+}
+
+/** "25" or "7.5" -> 25 / 7.5 when within 0..60 with at most 1 decimal, else null. */
+export function parsePercent(input: string): number | null {
+  const t = input.trim().replace(/%$/, "");
+  if (!/^\d{1,2}(\.\d)?$/.test(t)) return null;
+  const n = Number(t);
+  return n >= 0 && n <= 60 ? n : null;
+}

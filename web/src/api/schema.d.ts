@@ -4,6 +4,102 @@
  */
 
 export interface paths {
+    "/api/auth/csrf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        get: operations["getCsrf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/categories": {
         parameters: {
             query?: never;
@@ -17,9 +113,26 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["listCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Flags evaluated server-side. The UI mirrors them; the server enforces them (trap 25). */
+        get: operations["getFlags"];
         put?: never;
         post?: never;
         delete?: never;
@@ -41,7 +154,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["getHealth"];
         put?: never;
@@ -65,7 +178,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["getSummary"];
         put?: never;
@@ -91,7 +204,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         post: operations["runSync"];
         delete?: never;
@@ -113,10 +226,82 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["getSyncStatus"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tax/set-aside": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        get: operations["getTaxSetAside"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tax/set-aside-marks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        post: operations["createSetAsideMark"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tax/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+         *     so a global IsAuthenticated can be added in settings without touching views.
+         *
+         *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+         *     Mutating requests must be application/json: a cross-site form POST cannot send that
+         *     without a CORS preflight (defence in depth next to the CSRF token).
+         */
+        put: operations["updateTaxSettings"];
         post?: never;
         delete?: never;
         options?: never;
@@ -137,7 +322,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["listTransactions"];
         put?: never;
@@ -161,7 +346,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["getTransaction"];
         put?: never;
@@ -175,7 +360,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         patch: operations["updateTransaction"];
         trace?: never;
@@ -193,7 +378,7 @@ export interface paths {
          *
          *     Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
          *     Mutating requests must be application/json: a cross-site form POST cannot send that
-         *     without a CORS preflight (CSRF mitigation until session auth lands).
+         *     without a CORS preflight (defence in depth next to the CSRF token).
          */
         get: operations["getTransactionHistory"];
         put?: never;
@@ -253,6 +438,12 @@ export interface components {
             message: string;
             request_id: string;
         };
+        Flags: {
+            "tax-set-aside": boolean;
+            "auth-required": boolean;
+            "merchant-rules": boolean;
+            "category-suggestions": boolean;
+        };
         Health: {
             status: components["schemas"]["HealthStatusEnum"];
             db: components["schemas"]["DbEnum"];
@@ -275,6 +466,19 @@ export interface components {
             before: unknown;
             after: unknown;
         };
+        LoginRequestRequest: {
+            email: string;
+            password: string;
+        };
+        LoginResponse: {
+            user: components["schemas"]["User"];
+            idle_timeout_seconds: number;
+        };
+        Me: {
+            user: components["schemas"]["User"];
+            idle_timeout_seconds: number;
+            expires_in_seconds: number;
+        };
         PatchedTransactionPatchRequest: {
             category?: string | null;
             description?: string;
@@ -291,6 +495,55 @@ export interface components {
          * @enum {string}
          */
         RowKindEnum: "income" | "spend" | "refund" | "transfer" | "uncategorized_credit" | "excluded_currency";
+        SetAside: {
+            quarter: string;
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            /** Format: date */
+            due_on: string;
+            days_until_due: number;
+            /** Format: double */
+            rate: number;
+            is_current_period: boolean;
+            income_cents: number;
+            deductible_cents: number;
+            refund_adjustment_cents: number;
+            profit_cents: number;
+            estimate_cents: number;
+            set_aside_cents: number;
+            gap_cents: number;
+            status: components["schemas"]["SetAsideStatusEnum"];
+            uncategorized_credit_count: number;
+            uncategorized_credit_cents: number;
+            pending_uncategorized_debit_count: number;
+            uncategorized_debit_count: number;
+            uncategorized_debit_cents: number;
+            potential_reduction_cents: number;
+            disclaimer: string;
+        };
+        SetAsideMark: {
+            quarter: string;
+            amount_cents: number;
+            set_aside_cents: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SetAsideMarkRequestRequest: {
+            quarter: string;
+            /** Format: int64 */
+            amount_cents: number;
+            reason?: string;
+        };
+        /**
+         * @description * `on_track` - on_track
+         *     * `behind` - behind
+         *     * `no_income` - no_income
+         *     * `needs_review` - needs_review
+         * @enum {string}
+         */
+        SetAsideStatusEnum: "on_track" | "behind" | "no_income" | "needs_review";
         Summary: {
             month: string;
             income_cents: number;
@@ -339,6 +592,14 @@ export interface components {
             stale: boolean;
             rejected_count: number;
         };
+        TaxSettingsRequest: {
+            /** Format: decimal */
+            rate: string;
+        };
+        TaxSettingsResponse: {
+            /** Format: double */
+            rate: number;
+        };
         Transaction: {
             readonly id: string;
             readonly account_id: string;
@@ -371,6 +632,10 @@ export interface components {
          * @enum {string}
          */
         TransactionStatusEnum: "pending" | "posted";
+        User: {
+            email: string;
+            name: string;
+        };
         /**
          * @description * `ok` - ok
          *     * `down` - down
@@ -386,6 +651,108 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getCsrf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listCategories: {
         parameters: {
             query?: never;
@@ -401,6 +768,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryList"];
+                };
+            };
+        };
+    };
+    getFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flags"];
                 };
             };
         };
@@ -519,6 +905,116 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncStatus"];
+                };
+            };
+        };
+    };
+    getTaxSetAside: {
+        parameters: {
+            query?: {
+                /** @description 2026-Q4; default: the current period */
+                quarter?: string;
+                /** @description YYYY-MM-DD override (tests/demo) */
+                today?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetAside"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createSetAsideMark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAsideMarkRequestRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetAsideMark"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updateTaxSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaxSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxSettingsResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };

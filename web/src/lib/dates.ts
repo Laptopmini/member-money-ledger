@@ -79,3 +79,25 @@ export function formatClockOrDate(iso: string, now: Date = new Date()): string {
     d.getDate() === now.getDate();
   return same ? clock.format(d) : dateTime.format(d);
 }
+
+const longDay = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+const monthShort = new Intl.DateTimeFormat("en-US", { month: "short" });
+
+export function formatLongDate(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return longDay.format(new Date(y, m - 1, d));
+}
+
+export function shortMonthName(month: string): string {
+  const [y, m] = parts(month);
+  return monthShort.format(new Date(y, m - 1, 1));
+}
+
+/** Today's local date as YYYY-MM-DD, from local parts (never toISOString, which is UTC). */
+export function localToday(now: Date = new Date()): string {
+  return `${currentMonth(now)}-${pad(now.getDate())}`;
+}
