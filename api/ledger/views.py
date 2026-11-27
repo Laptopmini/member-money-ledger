@@ -336,7 +336,7 @@ class TransactionHistoryView(LedgerView):
         results = [
             {
                 "at": e.at,
-                "actor": e.actor if e.actor == "sync" else "you",
+                "actor": e.actor if e.actor in ("sync", "rule") else "you",
                 "action": e.action,
                 "before": e.before,
                 "after": e.after,

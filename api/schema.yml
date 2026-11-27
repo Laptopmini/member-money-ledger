@@ -173,6 +173,144 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
           description: ''
+  /api/rules:
+    get:
+      operationId: listRules
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (defence in depth next to the CSRF token).
+      tags:
+      - rules
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantRuleList'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    post:
+      operationId: createRule
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (defence in depth next to the CSRF token).
+      tags:
+      - rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantRuleRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantRuleCreated'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/rules/{rule_id}:
+    delete:
+      operationId: deleteRule
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (defence in depth next to the CSRF token).
+      parameters:
+      - in: path
+        name: rule_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - rules
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/rules/preview:
+    get:
+      operationId: previewRule
+      description: |-
+        Base for every endpoint. Authentication/permission come from REST_FRAMEWORK defaults,
+        so a global IsAuthenticated can be added in settings without touching views.
+
+        Throttle scope is `reads` for safe methods and `writes` otherwise unless a view sets its own.
+        Mutating requests must be application/json: a cross-site form POST cannot send that
+        without a CORS preflight (defence in depth next to the CSRF token).
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: merchant
+        schema:
+          type: string
+        required: true
+      tags:
+      - rules
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulePreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/summary:
     get:
       operationId: getSummary
@@ -770,6 +908,56 @@ components:
       - expires_in_seconds
       - idle_timeout_seconds
       - user
+    MerchantRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        merchant:
+          type: string
+        category:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - category
+      - created_at
+      - id
+      - merchant
+    MerchantRuleCreated:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/MerchantRule'
+        applied_count:
+          type: integer
+      required:
+      - applied_count
+      - rule
+    MerchantRuleList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MerchantRule'
+      required:
+      - results
+    MerchantRuleRequestRequest:
+      type: object
+      properties:
+        merchant:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+      - category
+      - merchant
     PatchedTransactionPatchRequest:
       type: object
       properties:
@@ -800,6 +988,19 @@ components:
         * `transfer` - transfer
         * `uncategorized_credit` - uncategorized_credit
         * `excluded_currency` - excluded_currency
+    RulePreview:
+      type: object
+      properties:
+        merchant:
+          type: string
+        category:
+          type: string
+        matching_uncategorized_count:
+          type: integer
+      required:
+      - category
+      - matching_uncategorized_count
+      - merchant
     SetAside:
       type: object
       properties:

@@ -242,3 +242,30 @@ class SetAsideMarkSerializer(serializers.Serializer[Any]):
     amount_cents = serializers.IntegerField()
     set_aside_cents = serializers.IntegerField()
     created_at = serializers.DateTimeField()
+
+
+class MerchantRuleSerializer(serializers.Serializer[Any]):
+    id = serializers.IntegerField()
+    merchant = serializers.CharField()
+    category = serializers.CharField()
+    created_at = serializers.DateTimeField()
+
+
+class MerchantRuleListSerializer(serializers.Serializer[Any]):
+    results = MerchantRuleSerializer(many=True)
+
+
+class MerchantRuleRequestSerializer(serializers.Serializer[Any]):
+    merchant = serializers.CharField(max_length=255)
+    category = serializers.CharField(max_length=64)
+
+
+class MerchantRuleCreatedSerializer(serializers.Serializer[Any]):
+    rule = MerchantRuleSerializer()
+    applied_count = serializers.IntegerField()
+
+
+class RulePreviewSerializer(serializers.Serializer[Any]):
+    merchant = serializers.CharField()
+    category = serializers.CharField()
+    matching_uncategorized_count = serializers.IntegerField()

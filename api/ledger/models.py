@@ -186,3 +186,21 @@ class SetAsideMark(models.Model):
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         raise AppendOnlyError("SetAsideMark is append-only")
+
+
+class MerchantRule(models.Model):
+    """'Always put <merchant> in <category>': applied to uncategorized rows only (ADR 0018)."""
+
+    member = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    merchant_key = models.CharField(max_length=255)  # normalized (see rules.normalize_merchant)
+    merchant = models.CharField(max_length=255)  # as the member typed it, for display
+    category = models.CharField(max_length=64)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["member", "merchant_key"], name="rule_member_key_uniq")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.merchant_key} -> {self.category}"

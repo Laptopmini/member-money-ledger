@@ -248,6 +248,7 @@ def run_sync(client: LedgerlyClient | None = None) -> SyncRun:
     run = SyncRun.objects.create(started_at=timezone.now(), status="running")
     try:
         _run(client, run)
+        _apply_rules_after(client, run)
     except VendorError as exc:
         _finish(run, "failed", "vendor_unavailable")
         log.warning(
@@ -258,6 +259,27 @@ def run_sync(client: LedgerlyClient | None = None) -> SyncRun:
         log.exception("sync_failed run=%s code=internal", run.pk)
         raise
     return run
+
+
+def _apply_rules_after(client: LedgerlyClient, run: SyncRun) -> None:
+    """After a successful sync (outside its transaction): apply merchant rules to rows this run
+    newly created and left uncategorized. Bounded; never fails the sync."""
+    if run.status != "ok":
+        return
+    try:
+        from .flags import flag
+        from .members import ensure_member
+        from .rules import apply_rules
+
+        if not flag("merchant-rules"):
+            return
+        member = ensure_member()
+        if member is None:
+            return
+        fresh = Transaction.objects.filter(created__gte=run.started_at, last_seen_sync_id=run.pk)
+        apply_rules(fresh, member=member, client=client, limit=100)
+    except Exception as exc:  # noqa: BLE001 - rules must never fail a sync
+        log.warning("rules_after_sync_failed type=%s", type(exc).__name__)
 
 
 def _finish(run: SyncRun, status: str, error_code: str = "") -> None:

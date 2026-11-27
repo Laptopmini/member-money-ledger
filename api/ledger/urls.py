@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import auth_views, tax_views, views
+from . import auth_views, rules_views, tax_views, views
 
 urlpatterns = [
     path("health", views.HealthView.as_view()),
@@ -18,6 +18,9 @@ urlpatterns = [
     path("tax/set-aside", tax_views.SetAsideView.as_view()),
     path("tax/settings", tax_views.TaxSettingsView.as_view()),
     path("tax/set-aside-marks", tax_views.SetAsideMarkView.as_view()),
+    path("rules/preview", rules_views.RulePreviewView.as_view()),
+    path("rules", rules_views.RuleListView.as_view()),
+    path("rules/<int:rule_id>", rules_views.RuleDetailView.as_view()),
     path("sync", views.SyncView.as_view()),
     path("sync/status", views.SyncStatusView.as_view()),
 ]
