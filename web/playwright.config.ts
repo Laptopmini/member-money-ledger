@@ -7,7 +7,8 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   workers: 1,
   fullyParallel: false,
-  retries: 0,
+  // CI runners hit transient Docker network changes (net::ERR_NETWORK_CHANGED); locally a failure fails.
+  retries: process.env.CI ? 2 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: [["list"]],
