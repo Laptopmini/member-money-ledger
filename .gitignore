@@ -12,3 +12,6 @@ test-results
 *.log
 *.tsbuildinfo
 .lighthouseci/
+web/e2e/.auth/
+web/test-results/
+web/playwright-report/
