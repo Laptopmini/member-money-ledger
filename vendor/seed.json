@@ -1,0 +1,67 @@
+[
+  {
+    "id": "txn_000001",
+    "account_id": "acc_checking",
+    "posted_on": "2026-10-28",
+    "amount_cents": 4599,
+    "direction": "debit",
+    "currency": "USD",
+    "merchant": "Blue Bottle Coffee",
+    "category": "meals",
+    "description": "Client coffee",
+    "status": "posted",
+    "updated_at": "2026-10-28T15:02:11Z"
+  },
+  {
+    "id": "txn_000002",
+    "account_id": "acc_checking",
+    "posted_on": "2026-10-25",
+    "amount_cents": 850000,
+    "direction": "credit",
+    "currency": "USD",
+    "merchant": "Acme Studio LLC",
+    "category": "income",
+    "description": "Invoice #1042",
+    "status": "posted",
+    "updated_at": "2026-10-25T09:40:00Z"
+  },
+  {
+    "id": "txn_000003",
+    "account_id": "acc_card",
+    "posted_on": "2026-10-21",
+    "amount_cents": 2400,
+    "direction": "debit",
+    "currency": "USD",
+    "merchant": "Figma",
+    "category": "software",
+    "description": "Monthly seat",
+    "status": "posted",
+    "updated_at": "2026-10-21T00:00:05Z"
+  },
+  {
+    "id": "txn_000004",
+    "account_id": "acc_card",
+    "posted_on": "2026-10-14",
+    "amount_cents": 31275,
+    "direction": "debit",
+    "currency": "USD",
+    "merchant": "Delta Air Lines",
+    "category": null,
+    "description": "AUS to SFO",
+    "status": "pending",
+    "updated_at": "2026-10-14T22:18:40Z"
+  },
+  {
+    "id": "txn_000005",
+    "account_id": "acc_card",
+    "posted_on": "2026-10-14",
+    "amount_cents": 2400,
+    "direction": "credit",
+    "currency": "USD",
+    "merchant": "Figma",
+    "category": "software",
+    "description": "Refund: duplicate seat",
+    "status": "posted",
+    "updated_at": "2026-10-16T11:05:12Z"
+  }
+]
