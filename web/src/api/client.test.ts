@@ -98,3 +98,14 @@ describe("csrf", () => {
     expect(spy.mock.calls.filter((c) => String(c[0]) === "/api/auth/csrf")).toHaveLength(1);
   });
 });
+
+describe("DELETE", () => {
+  it("sends a JSON content type and CSRF header", async () => {
+    document.cookie = "csrftoken=abc123";
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => json({}));
+    await apiFetch("/api/rules/1", { method: "DELETE", userActivity: true });
+    const h = spy.mock.calls[0][1]?.headers as Record<string, string> | undefined;
+    expect(h?.["Content-Type"]).toBe("application/json");
+    expect(h?.["X-CSRFToken"]).toBe("abc123");
+  });
+});
