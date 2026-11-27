@@ -126,6 +126,8 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8081
       # Demo-only seeded member for the local prod profile; never set a default in real prod.
       DEMO_MEMBER_PASSWORD: ${DEMO_MEMBER_PASSWORD:-demo-password-2026}
+      # Caddy is the only way in (api_prod only exposes 8000), so X-Forwarded-For is trustworthy here.
+      TRUST_PROXY: "1"
     expose:
       - "8000"
     depends_on:
