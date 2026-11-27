@@ -122,6 +122,8 @@ services:
     environment:
       <<: *api-env
       DJANGO_DEBUG: "0"
+      DJANGO_SECURE_COOKIES: "0"  # the prod profile serves plain HTTP on :8081; set to 1 behind TLS
+      DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8081
     expose:
       - "8000"
     depends_on:
