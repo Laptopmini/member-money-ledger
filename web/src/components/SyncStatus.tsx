@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRefresh, useSyncStatus } from "../api/queries";
 import { formatRelative } from "../lib/dates";
+import { Refresh } from "./icons";
 
 export function SyncStatus() {
   const { data } = useSyncStatus();
@@ -19,17 +20,25 @@ export function SyncStatus() {
     else text = "Never synced";
   }
 
+  const dot = data?.state === "vendor_down" ? "down" : running ? "running" : "ok";
+  const label = running ? "Refreshing…" : data?.state === "vendor_down" ? "Try again" : "Refresh";
+
   return (
     <div className="sync-status">
-      <span className="sync-status__text">{text}</span>
+      <span className={`sync-dot sync-dot--${dot}`} aria-hidden="true" />
+      <span className="sync-status__text" role="status">
+        {data?.state === "vendor_down" ? "Bank feed offline" : text}
+      </span>
       <button
         type="button"
-        className="btn btn--small"
+        className={`btn btn--small btn--icon sync-refresh${running ? " is-busy" : ""}`}
         disabled={running}
         aria-busy={running}
+        aria-label={label}
+        title={label}
         onClick={() => refresh.mutate()}
       >
-        {running ? "Syncing…" : "Refresh"}
+        <Refresh />
       </button>
     </div>
   );
