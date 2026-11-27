@@ -8,6 +8,13 @@ import { compose, openOctober, resetState, STATE_FILE, VENDOR, waitForVendor } f
 // tests re-reset in beforeAll where they depend on the seed.
 
 const summary = (page: Page) => page.getByRole("region", { name: /Summary for/ });
+// The stat block is the dt's parent: dt (label) plus its dd values.
+const stat = (page: Page, name: string) =>
+  summary(page)
+    .locator("dt", { hasText: new RegExp(`^${name}$`) })
+    .locator("xpath=..");
+const spendValue = (page: Page) => stat(page, "Spend").locator("dd").first();
+const needsCategory = (page: Page) => summary(page).getByText(/needs? a category/);
 const rows = (page: Page) => page.getByRole("list", { name: "Transactions" }).getByRole("listitem");
 const rowFor = (page: Page, merchant: string) =>
   rows(page).filter({ has: page.getByLabel(`Category for ${merchant}`) });
@@ -21,20 +28,20 @@ test("default-month (trap 21): opens on empty November, jump shows October", asy
 
   const s = summary(page);
   await expect(s).toBeVisible();
-  const item = (name: string) =>
-    s.locator("div", { has: page.getByText(name, { exact: true }) }).first();
-  await expect(item("Income")).toContainText("$8,500.00");
-  await expect(item("Spend")).toContainText("$45.99");
+  const item = (name: string) => stat(page, name);
+  await expect(item("Income")).toContainText("+$8,500.00");
+  await expect(item("Spend")).toContainText("−$45.99");
   await expect(item("Spend")).toContainText("+ $312.75 pending");
   await expect(item("Net")).toContainText("+$8,454.01");
-  await expect(s.getByRole("button", { name: /1 transaction needs a category/ })).toBeVisible();
+  await expect(needsCategory(page)).toContainText("1 transaction needs a category");
+  await expect(s.getByRole("button", { name: "Review it" })).toBeVisible();
 });
 
 test("filter: uncategorized nudge, clear, search", async ({ page }) => {
   await openOctober(page);
   await expect(rows(page)).toHaveCount(5);
 
-  await page.getByRole("button", { name: /1 transaction needs a category/ }).click();
+  await summary(page).getByRole("button", { name: "Review it" }).click();
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Delta Air Lines");
 
@@ -50,7 +57,7 @@ test("recategorize (traps 3, 8, 12): Delta to Travel persists, then Blue Bottle 
   request,
 }) => {
   await openOctober(page);
-  const nudge = page.getByRole("button", { name: /needs a category/ });
+  const nudge = needsCategory(page);
   await expect(nudge).toBeVisible();
 
   await rowFor(page, "Delta Air Lines")
@@ -63,8 +70,7 @@ test("recategorize (traps 3, 8, 12): Delta to Travel persists, then Blue Bottle 
   await expect(nudge).toHaveCount(0);
 
   // Pending spend stays out of Spend.
-  const s = summary(page);
-  await expect(s.locator("dd").nth(1)).toContainText("$45.99");
+  await expect(spendValue(page)).toContainText("$45.99");
 
   // Persisted in the vendor, and survives a reload.
   const res = await request.get(`${VENDOR}/v1/transactions/txn_000004`);
@@ -73,7 +79,7 @@ test("recategorize (traps 3, 8, 12): Delta to Travel persists, then Blue Bottle 
   await expect(
     rowFor(page, "Delta Air Lines").getByLabel("Category for Delta Air Lines"),
   ).toHaveValue("travel");
-  await expect(page.getByRole("button", { name: /needs a category/ })).toHaveCount(0);
+  await expect(needsCategory(page)).toHaveCount(0);
 
   // Moving the only Meals row away removes the Meals bar; Spend is unchanged.
   const bars = page.getByRole("list", { name: "Spend by category" });
@@ -82,7 +88,7 @@ test("recategorize (traps 3, 8, 12): Delta to Travel persists, then Blue Bottle 
     .getByLabel("Category for Blue Bottle Coffee")
     .selectOption("software");
   await expect(bars).not.toContainText("Meals", { timeout: 15_000 });
-  await expect(summary(page).locator("dd").nth(1)).toContainText("$45.99");
+  await expect(spendValue(page)).toContainText("$45.99");
 });
 
 test.describe("vendor down (trap 8, 17)", () => {
@@ -99,7 +105,7 @@ test.describe("vendor down (trap 8, 17)", () => {
     await expect(rows(page)).toHaveCount(5);
 
     compose("stop", "vendor");
-    await page.getByRole("button", { name: "Refresh" }).first().click();
+    await page.getByRole("button", { name: "Refresh" }).click();
 
     await expect(page.getByText("We can't reach your bank feed right now.")).toBeVisible({
       timeout: 30_000,
