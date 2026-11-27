@@ -124,6 +124,8 @@ services:
       DJANGO_DEBUG: "0"
       DJANGO_SECURE_COOKIES: "0"  # the prod profile serves plain HTTP on :8081; set to 1 behind TLS
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8081
+      # Demo-only seeded member for the local prod profile; never set a default in real prod.
+      DEMO_MEMBER_PASSWORD: ${DEMO_MEMBER_PASSWORD:-demo-password-2026}
     expose:
       - "8000"
     depends_on:
