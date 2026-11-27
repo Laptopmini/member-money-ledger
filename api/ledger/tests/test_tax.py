@@ -112,6 +112,13 @@ def test_status_values():
     assert compute([row("income", "credit", 100000)], marked=25000)["status"] == "on_track"
 
 
+def test_uncategorized_credit_needs_review():
+    out = compute([row(None, "credit", 4500)])
+    assert out["uncategorized_credit_count"] == 1 and out["uncategorized_credit_cents"] == 4500
+    assert out["status"] == "needs_review"
+    assert compute([row("income", "debit", 100)])["status"] == "no_income"  # negative income
+
+
 def test_days_until_due_and_example_shape():
     out = compute([row("income", "credit", 850000), row("meals", "debit", 4599)])
     assert out["days_until_due"] == 49
@@ -191,3 +198,46 @@ def test_flag_off_is_404():
         ),
     ):
         assert r.status_code == 404 and r.json()["error"]["code"] == "feature_disabled"
+
+
+@pytest.mark.django_db
+def test_no_member_is_503(settings, monkeypatch):
+    settings.ALLOW_DEV_DEFAULTS = False  # no dev password, so nobody can be (re)created
+    monkeypatch.delenv("DEMO_MEMBER_PASSWORD", raising=False)
+    from django.contrib.auth import get_user_model
+
+    get_user_model().objects.all().delete()
+    api = APIClient()
+    for r in (
+        api.get("/api/tax/set-aside"),
+        api.put("/api/tax/settings", {"rate": 0.3}, format="json"),
+        api.post(
+            "/api/tax/set-aside-marks", {"quarter": "2026-Q4", "amount_cents": 5}, format="json"
+        ),
+    ):
+        assert r.status_code == 503 and r.json()["error"]["code"] == "no_member"
+
+
+@pytest.mark.django_db
+def test_rate_negative_zero_and_quarter_range():
+    api = APIClient()
+    assert api.put("/api/tax/settings", {"rate": "-0"}, format="json").json() == {"rate": 0.0}
+    assert api.get("/api/tax/set-aside?quarter=2020-Q1&today=2026-11-27").status_code == 400
+    assert api.get("/api/tax/set-aside?quarter=2027-Q1&today=2026-11-27").status_code == 200
+
+
+@pytest.mark.django_db
+def test_reversal_marks():
+    api = APIClient()
+
+    def post(**b):
+        return api.post("/api/tax/set-aside-marks", {"quarter": "2026-Q4", **b}, format="json")
+
+    assert post(amount_cents=10000).status_code == 201
+    assert post(amount_cents=-500).status_code == 400  # reason required
+    assert post(amount_cents=-20000, reason="oops").status_code == 400  # below zero
+    assert post(amount_cents=-500, reason="x" * 201).status_code == 400
+    r = post(amount_cents=-4000, reason="moved to savings")
+    assert r.status_code == 201 and r.json()["set_aside_cents"] == 6000
+    ev = AuditEvent.objects.filter(action="set_aside_marked").latest("id")
+    assert ev.txn_id == "q:2026-Q4" and ev.actor == "member"

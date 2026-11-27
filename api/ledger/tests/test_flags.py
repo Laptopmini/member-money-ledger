@@ -46,3 +46,25 @@ def test_flags_endpoint_is_open_and_server_evaluated():
         "merchant-rules": True,
         "category-suggestions": False,
     }
+
+
+def test_real_provider_pointed_at_dead_host_falls_back(monkeypatch):
+    """Real FlagdProvider, unreachable host: defaults returned, flagd backed off."""
+    import time
+
+    from openfeature import api
+
+    flags.TEST_OVERRIDES = None
+    flags._cache.clear()
+    monkeypatch.setattr(flags, "_down_until", 0.0)
+    monkeypatch.setattr(flags, "_provider_ready", False)
+    monkeypatch.setenv("FLAGD_HOST", "127.0.0.1")
+    monkeypatch.setenv("FLAGD_PORT", "1")
+    started = time.monotonic()
+    try:
+        assert flags.flag("tax-set-aside") is True
+        assert flags.flag("merchant-rules") is False
+    finally:
+        api.clear_providers()
+    assert time.monotonic() - started < 5
+    assert flags._down_until > 0  # the failure path ran and the 30 s back-off is set

@@ -2,7 +2,6 @@ import time
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from ledger import flags
@@ -72,17 +71,61 @@ def test_login_throttle_per_ip(db, auth_on):
     assert codes[:5] == [400] * 5 and codes[5] == 429
 
 
-def test_login_throttle_per_username(db, auth_on):
-    cache.clear()
-    codes = []
-    for i in range(21):
+def test_correct_password_succeeds_after_failures_from_other_ips(db, auth_on):
+    for i in range(20):
         api = APIClient(REMOTE_ADDR=f"10.0.0.{i}")
-        codes.append(
+        assert (
             api.post(
-                "/api/auth/login", {"email": "a@x.com", "password": "x"}, format="json"
+                "/api/auth/login", {"email": DEMO_EMAIL, "password": "x"}, format="json"
             ).status_code
+            == 400
         )
-    assert 429 not in codes[:20] and codes[20] == 429
+    ok = APIClient(REMOTE_ADDR="10.9.9.9").post("/api/auth/login", CREDS, format="json")
+    assert ok.status_code == 200
+
+
+def test_login_failures_per_email_and_ip_cap(db, auth_on):
+    from rest_framework.test import APIRequestFactory
+
+    from ledger.throttles import LoginUserThrottle
+
+    req = APIRequestFactory().post(
+        "/api/auth/login", {"email": "a@x.com"}, format="json", REMOTE_ADDR="10.1.1.1"
+    )
+    from rest_framework.parsers import JSONParser
+    from rest_framework.request import Request
+
+    drf_req = Request(req, parsers=[JSONParser()])
+    for _ in range(20):
+        LoginUserThrottle().record_failure(drf_req, None)
+    assert LoginUserThrottle().allow_request(drf_req, None) is False
+
+
+def test_throttle_messages(db, auth_on):
+    api = APIClient()
+    for i in range(5):
+        api.post("/api/auth/login", {"email": f"u{i}@x.com", "password": "x"}, format="json")
+    r = api.post("/api/auth/login", {"email": "z@x.com", "password": "x"}, format="json")
+    assert r.status_code == 429
+    assert r.json()["error"]["message"] == "Too many attempts. Try again in a minute."
+    from ledger.errors import throttle_message
+
+    assert throttle_message(10) == "Too many attempts. Try again in 10 seconds."
+    assert throttle_message(120) == "Too many attempts. Try again in 2 minutes."
+
+
+def test_failed_request_does_not_refresh_activity(db, auth_on):
+    api = login()
+    _age(api, 600)
+    r = api.get("/api/transactions/nope%20bad", HTTP_X_USER_ACTIVITY="1")  # 404
+    assert r.status_code == 404
+    assert api.get("/api/auth/me").json()["expires_in_seconds"] <= 300
+
+
+def test_cache_table_migrated(db):
+    from django.db import connection
+
+    assert "django_cache" in connection.introspection.table_names()
 
 
 def test_csrf_enforced_for_signed_in_writes(db, auth_on):
