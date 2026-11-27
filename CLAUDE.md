@@ -1,7 +1,10 @@
-# Agent instructions
+@AGENTS.md
 
-This folder is a take-home exercise. The task is in `PROMPT.md`. The vendor API is documented in `CONTRACT.md`.
+# Claude-specific notes
 
-- Do not modify anything in `vendor/`. It stands in for a third-party service.
-- If the user is on Windows, give commands in PowerShell syntax.
-- Run everything with `docker compose up --build` (see `README.md` for ports).
+- **Subagents** (`.claude/agents/`): `backend-engineer` (api/), `frontend-engineer` (web/),
+  `qa-engineer` (tests), `reviewer` (read-only, opus), `devops` (root config, haiku).
+  Subagents never commit; the main session reviews, runs gates and commits.
+- **Skills** (`.claude/skills/`): `verify`, `reset-demo`, `adr`.
+- **The clock**: the build was time-boxed to 90 minutes from T0; see
+  `docs/process/03-execution-log.md`. Log notable AI mistakes in `docs/ai-log.md` as they happen.
