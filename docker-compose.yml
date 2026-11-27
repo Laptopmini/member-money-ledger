@@ -104,7 +104,9 @@ services:
       # Named volume, not an anonymous one: deps survive rebuilds, and the entrypoint
       # re-runs `npm ci` when package-lock.json changes.
       - web_node_modules:/app/node_modules
-      - ./api/schema.yml:/api/schema.yml:ro  # make types: openapi-typescript reads ../api/schema.yml
+      # make types: openapi-typescript reads ../api/schema.yml. Mount the directory, not the file:
+      # regenerating schema.yml replaces the file, which breaks a single-file bind mount.
+      - ./api:/api:ro
     depends_on:
       - api
       - flagd
