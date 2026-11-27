@@ -82,3 +82,31 @@ describe("Summary", () => {
     expect(screen.queryByText(/No transactions in/)).not.toBeInTheDocument();
   });
 });
+
+describe("filter buttons scroll to the transactions", () => {
+  it("the nudge scrolls the Transactions section into view and focuses its heading", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    window.matchMedia = ((q: string) => ({
+      matches: false,
+      media: q,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as never;
+    window.history.replaceState(null, "", "/?month=2026-10");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(base));
+    renderWithProviders(
+      <>
+        <Summary />
+        <section id="transactions">
+          <h2 id="txns-title" tabIndex={-1}>
+            Transactions
+          </h2>
+        </section>
+      </>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /needs a category/ }));
+    expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(screen.getByRole("heading", { name: "Transactions" })).toHaveFocus();
+  });
+});
